@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Blocks.InstanceDB ID="0">
+    <AttributeList>
+      <InstanceOfName>G120Comm</InstanceOfName>
+      <InstanceOfType>FB</InstanceOfType>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/
+Interface/v5">
+  <Section Name="Input" />
+  <Section Name="Output">
+    <Member Name="AnalogInput" Datatype="Real" />
+  </Section>
+  <Section Name="InOut" />
+  <Section Name="Static">
+    <Member Name="WRREC_Instance" Datatype="WRREC" Version="1.1">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttr
+ibute>
+      </AttributeList>
+    </Member>
+    <Member Name="RDREC_Instance" Datatype="RDREC" Version="1.0">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttr
+ibute>
+      </AttributeList>
+    </Member>
+    <Member Name="WriteRecord" Datatype="Struct">
+      <Member Name="Static_1" Datatype="&quot;HEADER&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAt
+tribute>
+        </AttributeList>
+      </Member>
+      <Member Name="Static_2" Datatype="&quot;PARAMETERADDR&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAt
+tribute>
+        </AttributeList>
+      </Member>
+    </Member>
+    <Member Name="ReadRecord" Datatype="Struct">
+      <Member Name="data" Datatype="Array[0..5] of Byte" />
+      <Member Name="Value" Datatype="Real" />
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>G120Comm_DB</Name>
+      <Namespace />
+      <Number>17</Number>
+      <ProgrammingLanguage>DB</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Blocks.InstanceDB>
+</Document>
