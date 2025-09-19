@@ -1,6 +1,6 @@
 from lxml import etree as ET
 import os
-from src.data_model.data_model import PlcBlock, Network, Part, Pin, Wire, PlcTagTable, PlcTag
+from src.data_model.data_model import PlcBlock, Network, Part, Pin, Wire, PlcTagTable, PlcTag, BlockInterface, InterfaceMember
 
 def get_multilingual_text(element, composition_name):
     if element is None: return ""
@@ -11,18 +11,15 @@ def parse_lad_fbd_file(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f: xml_content = f.read()
 
-        # This string replacement is brittle. A better solution would be a more robust XML cleanup.
-        # For now, it handles the observed newline issues in namespace URIs.
-        replacements = {
-            'xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5"': 'xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5"',
-            'xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5"': 'xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5"',
-            'xmlns="http://www.siemens.com/automation/Openness/SW/BlockTypes/v5"': 'xmlns="http://www.siemens.com/automation/Openness/SW/BlockTypes/v5"'
-        }
+        # This string replacement is brittle but handles observed newline issues in namespace URIs.
         xml_content = xml_content.replace('Openne\nss', 'Openness').replace('SW/\nInterface', 'SW/Interface').replace('Block\nTypes', 'BlockTypes')
 
         parser = ET.XMLParser(recover=True, encoding='utf-8')
         root = ET.fromstring(xml_content.encode('utf-8'), parser=parser)
-        ns = {'default': 'http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5'}
+
+        # Define namespaces
+        ns_flgnet = {'default': 'http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5'}
+        ns_if = {'if': 'http://www.siemens.com/automation/Openness/SW/Interface/v5'}
 
         block_element = root.find(".//SW.Blocks.FB")
         if block_element is None: block_element = root.find(".//SW.Blocks.FC")
@@ -30,7 +27,6 @@ def parse_lad_fbd_file(file_path):
         if block_element is None: return None
 
         attribute_list = block_element.find("AttributeList")
-        # Robustly get the block name
         block_name = get_multilingual_text(attribute_list, "Name")
         if not block_name:
             name_el = attribute_list.find("Name")
@@ -40,6 +36,34 @@ def parse_lad_fbd_file(file_path):
                              block_type=block_element.tag.split('.')[-1],
                              language=attribute_list.find("ProgrammingLanguage").text)
 
+        # --- New Interface Parsing Logic ---
+        interface_el = attribute_list.find("Interface")
+        if interface_el is not None:
+            # The namespace is defined on the <Sections> tag, so we need to use it in the XPath.
+            for section_el in interface_el.xpath("if:Sections/if:Section", namespaces=ns_if):
+                section_name = section_el.get("Name")
+                target_list = None
+                if section_name == "Input": target_list = plc_block.interface.input_members
+                elif section_name == "Output": target_list = plc_block.interface.output_members
+                elif section_name == "InOut": target_list = plc_block.interface.in_out_members
+                elif section_name == "Static": target_list = plc_block.interface.static_members
+                elif section_name == "Temp": target_list = plc_block.interface.temp_members
+
+                if target_list is not None:
+                    for member_el in section_el.findall("if:Member", namespaces=ns_if):
+                        # Comments for interface members can be complex.
+                        # This is a simplified approach for now.
+                        comment_text = ""
+                        comment_el = member_el.find(".//MultilingualText[@CompositionName='Comment']//Text")
+                        if comment_el is not None and comment_el.text is not None:
+                            comment_text = comment_el.text
+
+                        member = InterfaceMember(name=member_el.get("Name"),
+                                                 data_type=member_el.get("Datatype"),
+                                                 comment=comment_text)
+                        target_list.append(member)
+        # --- End of Interface Parsing Logic ---
+
         for i, compile_unit in enumerate(block_element.findall(".//SW.Blocks.CompileUnit")):
             network = Network(number=i + 1,
                               title=get_multilingual_text(compile_unit, "Title"),
@@ -47,7 +71,7 @@ def parse_lad_fbd_file(file_path):
 
             flg_net = compile_unit.find(".//NetworkSource/*") # This should find the FlgNet element
             if flg_net is not None:
-                for part_element in flg_net.xpath("./default:Parts/*", namespaces=ns):
+                for part_element in flg_net.xpath("./default:Parts/*", namespaces=ns_flgnet):
                     part = Part(uid=part_element.get('UId'), part_type=part_element.get('Name'))
                     for con_element in part_element.findall('Con'):
                         pin_name = con_element.get('Name')
@@ -61,7 +85,7 @@ def parse_lad_fbd_file(file_path):
                         part.pins.append(Pin(name="operand", operand=operand))
                     network.parts.append(part)
 
-                for wire_element in flg_net.xpath("./default:Wires/default:Wire", namespaces=ns):
+                for wire_element in flg_net.xpath("./default:Wires/default:Wire", namespaces=ns_flgnet):
                     connections = wire_element.getchildren()
                     if len(connections) >= 2:
                         start_node, end_node = connections[0], connections[1]
@@ -121,28 +145,38 @@ if __name__ == '__main__':
         try:
             parsed_block = parse_lad_fbd_file(sample_file)
             if parsed_block:
-                print("\\n--- PARSE SUCCESS ---")
+                print("\n--- PARSE SUCCESS ---")
                 print(f"Block Name: {parsed_block.name}")
                 print(f"Block Type: {parsed_block.block_type}")
                 print(f"Language: {parsed_block.language}")
                 print(f"Number of Networks: {len(parsed_block.networks)}")
 
-                total_parts = sum(len(net.parts) for net in parsed_block.networks)
-                total_wires = sum(len(net.wires) for net in parsed_block.networks)
+                # --- Test Interface Parsing ---
+                if parsed_block.interface:
+                    print("\n--- Interface Members ---")
+                    def print_members(section_name, members):
+                        if members:
+                            print(f"{section_name}:")
+                            for member in members:
+                                print(f"  - {member.name} ({member.data_type})")
 
-                print(f"Total Parts (Instructions): {total_parts}")
-                print(f"Total Wires: {total_wires}")
+                    print_members("Input", parsed_block.interface.input_members)
+                    print_members("Output", parsed_block.interface.output_members)
+                    print_members("InOut", parsed_block.interface.in_out_members)
+                    print_members("Static", parsed_block.interface.static_members)
+                    print_members("Temp", parsed_block.interface.temp_members)
+                # --- End Test ---
 
                 if parsed_block.networks:
                     net1 = parsed_block.networks[0]
-                    print("\\n--- Network 1 Details ---")
-                    print(f"  Title: {net1.title}")
-                    print(f"  Parts: {len(net1.parts)}")
-                    print(f"  Wires: {len(net1.wires)}")
+                    total_parts = sum(len(net.parts) for net in parsed_block.networks)
+                    total_wires = sum(len(net.wires) for net in parsed_block.networks)
+                    print(f"\nTotal Parts (Instructions): {total_parts}")
+                    print(f"Total Wires: {total_wires}")
 
             else:
-                print("\\n--- PARSE FAILED: The function returned None. ---")
+                print("\n--- PARSE FAILED: The function returned None. ---")
         except Exception as e:
-            print(f"\\n--- PARSE CRASHED: An exception occurred: {e} ---")
+            print(f"\n--- PARSE CRASHED: An exception occurred: {e} ---")
             import traceback
             traceback.print_exc()

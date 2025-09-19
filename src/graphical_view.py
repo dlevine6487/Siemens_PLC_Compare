@@ -70,19 +70,71 @@ class NetworkView(QGraphicsView):
         self.setScene(self.scene)
         self.setRenderHint(QPainter.Antialiasing)
         self.rail_pen, self.wire_pen = QPen(Qt.black, 2), QPen(Qt.black, 2)
-        self.title_font, self.comment_font = QFont("Arial", 10, QFont.Bold), QFont("Arial", 8)
+        self.title_font = QFont("Arial", 10, QFont.Bold)
+        self.comment_font = QFont("Arial", 8, italic=True)
+        self.interface_font = QFont("Courier New", 9)
         self.draw_block()
 
     def handle_part_click(self, part):
-        info = f"--- Properties ---\\n\\nType: {part.part_type}\\nUID: {part.uid}\\n\\n--- Pins ---\\n"
-        for pin in part.pins: info += f"{pin.name}: {pin.operand}\\n"
+        info = f"--- Properties ---\n\nType: {part.part_type}\nUID: {part.uid}\n\n--- Pins ---\n"
+        for pin in part.pins: info += f"{pin.name}: {pin.operand}\n"
         self.properties_signal.emit(info)
 
     def draw_block(self):
         self.scene.clear()
-        y_offset = 0
+        y_offset = 20
+        interface_height = self.draw_interface(y_offset)
+        y_offset += interface_height + 40
         for network in self.plc_block.networks:
             y_offset += self.draw_network(network, y_offset) + 50
+
+    def draw_interface(self, y_offset):
+        H_MARGIN, V_SPACING, COL_WIDTH = 20, 18, 200
+        current_y = y_offset
+
+        interface_title = QGraphicsTextItem(f"--- Block Interface: {self.plc_block.name} ({self.plc_block.block_type}) ---")
+        interface_title.setFont(self.title_font)
+        interface_title.setPos(H_MARGIN, current_y)
+        self.scene.addItem(interface_title)
+        current_y += interface_title.boundingRect().height() + 10
+
+        def draw_section(title, members):
+            nonlocal current_y
+            if not members: return
+
+            section_title = QGraphicsTextItem(f"// {title}")
+            section_title.setFont(self.comment_font)
+            section_title.setDefaultTextColor(Qt.gray)
+            section_title.setPos(H_MARGIN, current_y)
+            self.scene.addItem(section_title)
+            current_y += V_SPACING
+
+            header_name = QGraphicsTextItem("Name")
+            header_type = QGraphicsTextItem("Data Type")
+            header_name.setFont(self.interface_font); header_type.setFont(self.interface_font)
+            header_name.setPos(H_MARGIN + 20, current_y); header_type.setPos(H_MARGIN + 20 + COL_WIDTH, current_y)
+            self.scene.addItem(header_name); self.scene.addItem(header_type)
+            current_y += V_SPACING
+
+            for member in members:
+                item_name = QGraphicsTextItem(member.name)
+                item_type = QGraphicsTextItem(member.data_type)
+                item_name.setFont(self.interface_font); item_type.setFont(self.interface_font)
+                item_name.setPos(H_MARGIN + 20, current_y)
+                item_type.setPos(H_MARGIN + 20 + COL_WIDTH, current_y)
+                self.scene.addItem(item_name)
+                self.scene.addItem(item_type)
+                current_y += V_SPACING
+            current_y += 10
+
+        interface = self.plc_block.interface
+        draw_section("Input", interface.input_members)
+        draw_section("Output", interface.output_members)
+        draw_section("InOut", interface.in_out_members)
+        draw_section("Static", interface.static_members)
+        draw_section("Temp", interface.temp_members)
+
+        return current_y - y_offset
 
     def draw_network(self, network, y_offset):
         H_MARGIN, H_SPACING, RUNG_HEIGHT = 20, 30, 100
