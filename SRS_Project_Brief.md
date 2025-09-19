@@ -1,4 +1,4 @@
-# Project Brief for AI Software Architect: Development of a Standalone Siemens PLC Code Viewer
+# Project Brief for Software Architect: Development of a Standalone Siemens PLC Code Viewer
 
 ## Objective:
 You are to generate a comprehensive Software Requirements Specification (SRS) for a new desktop application: the "Siemens PLC Code Viewer." The primary purpose of this application is to enable engineers, technicians, and developers to view Siemens PLC code, exported from the TIA Portal, in a user-friendly graphical format on a machine where TIA Portal is not installed. The application will need to parse the proprietary Siemens XML export format and render it accurately.
