@@ -1,0 +1,19 @@
+{
+           S7_Optimized := "TRUE";
+           S7_StandardRetain := "FALSE";
+           S7_Version := "0.1"
+        }
+    DATA_BLOCK MyDataBlock
+        VAR
+            MyInteger : Int;
+            MyInteger1 : Int;
+            MyBoolean1 : Bool;
+            MyBoolean2 : Bool;
+        END_VAR
+
+        MyInteger := 123;
+        MyInteger1 := 456;
+        MyBoolean1 := True;
+        MyBoolean2 := False;
+
+    END_DATA_BLOCK

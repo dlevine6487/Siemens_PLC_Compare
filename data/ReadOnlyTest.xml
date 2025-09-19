@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.Tags.PlcTagTable>
+    <ObjectList>
+      <SW.Tags.PlcTag>
+        <AttributeList>
+          <Name>Motor_Status</Name>
+          <DataTypeName>Word</DataTypeName>
+          <LogicalAddress>%IW10</LogicalAddress>
+          <Accessibility>ReadOnly</Accessibility>
+        </AttributeList>
+      </SW.Tags.PlcTag>
+      <SW.Tags.PlcTag>
+        <AttributeList>
+          <Name>Speed_Setpoint</Name>
+          <DataTypeName>Int</DataTypeName>
+          <LogicalAddress>%QW12</LogicalAddress>
+          <Accessibility>ReadWrite</Accessibility>
+        </AttributeList>
+      </SW.Tags.PlcTag>
+    </ObjectList>
+  </SW.Tags.PlcTagTable>
+</Document>
