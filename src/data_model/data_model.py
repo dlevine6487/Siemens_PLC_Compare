@@ -15,7 +15,6 @@ class Part: # This is our "LadderInstruction"
     def __init__(self, uid, part_type, pins=None):
         self.uid, self.part_type = uid, part_type
         self.pins = pins if pins is not None else []
-    def get_operand(self): return self.pins[0].operand if self.pins else ""
 
 class Wire:
     def __init__(self, uid, start_part, start_conn, end_part, end_conn):

@@ -28,7 +28,16 @@ class InteractivePartItem(QGraphicsObject):
 
     def paint(self, painter, option, widget):
         painter.setPen(self.symbol_pen)
-        operand = self.part.get_operand()
+
+        # Common logic for finding the main operand for simple parts
+        operand = ""
+        if self.part.part_type in ['Contact', 'Coil']:
+            for pin in self.part.pins:
+                # The primary tag for a simple contact/coil is often just called 'operand' by our parser
+                if pin.name == 'operand':
+                    operand = pin.operand
+                    break
+
         if self.part.part_type == 'Contact':
             painter.setFont(self.operand_font)
             painter.drawText(QRectF(0, -25, 50, 20), Qt.AlignCenter, operand)
@@ -42,21 +51,32 @@ class InteractivePartItem(QGraphicsObject):
             painter.drawLine(0, 0, 15, 0)
             painter.drawEllipse(15, -10, 20, 20)
             painter.drawLine(35, 0, 50, 0)
-        else:
+        else: # This is for complex blocks like timers, counters, etc.
             rect = QRectF(0, -self.item_height / 2, self.item_width, self.item_height)
             painter.drawRect(rect)
             painter.setFont(self.type_font)
             painter.drawText(rect, Qt.AlignCenter, self.part.part_type)
+
             y_in, y_out = -self.item_height/2 + 5, -self.item_height/2 + 5
             for pin in self.part.pins:
-                is_out = pin.name in ['OUT', 'RET_VAL', 'ENO']
+                is_out = pin.name in ['OUT', 'RET_VAL', 'ENO'] # Simple check for output pins
                 y = y_out if is_out else y_in
+
+                # Draw Pin Name
                 painter.setFont(self.pin_font)
-                painter.drawText(QRectF(5, y, self.item_width-10, 15), Qt.AlignRight if is_out else Qt.AlignLeft, pin.name)
+                align_pin = Qt.AlignRight if is_out else Qt.AlignLeft
+                painter.drawText(QRectF(5, y, self.item_width - 10, 15), align_pin, pin.name)
+
+                # Draw Pin Operand (the connected tag)
                 painter.setFont(self.operand_font)
-                painter.drawText(QRectF(self.item_width+5, y, 95, 15) if is_out else QRectF(-100, y, 95, 15), Qt.AlignLeft if is_out else Qt.AlignRight, pin.operand)
-                if is_out: y_out += 15
-                else: y_in += 15
+                align_operand = Qt.AlignLeft if is_out else Qt.AlignRight
+                rect_operand = QRectF(self.item_width + 5, y, 95, 15) if is_out else QRectF(-100, y, 95, 15)
+                painter.drawText(rect_operand, align_operand, pin.operand)
+
+                if is_out:
+                    y_out += 15
+                else:
+                    y_in += 15
 
     def mousePressEvent(self, event):
         self.partClicked.emit(self.part)
