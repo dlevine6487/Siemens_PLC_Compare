@@ -1,6 +1,6 @@
 from lxml import etree as ET
 import os
-from src.data_model.data_model import PlcBlock, Network, Part, Pin, Wire, PlcTagTable, PlcTag
+from src.data_model.data_model import PlcBlock, Network, Part, Pin, Wire, PlcTagTable, PlcTag, BlockInterface, InterfaceMember
 
 def get_multilingual_text(element, composition_name):
     if element is None: return ""
@@ -11,18 +11,13 @@ def parse_lad_fbd_file(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f: xml_content = f.read()
 
-        # This string replacement is brittle. A better solution would be a more robust XML cleanup.
-        # For now, it handles the observed newline issues in namespace URIs.
-        replacements = {
-            'xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5"': 'xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5"',
-            'xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5"': 'xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5"',
-            'xmlns="http://www.siemens.com/automation/Openness/SW/BlockTypes/v5"': 'xmlns="http://www.siemens.com/automation/Openness/SW/BlockTypes/v5"'
-        }
         xml_content = xml_content.replace('Openne\nss', 'Openness').replace('SW/\nInterface', 'SW/Interface').replace('Block\nTypes', 'BlockTypes')
 
         parser = ET.XMLParser(recover=True, encoding='utf-8')
         root = ET.fromstring(xml_content.encode('utf-8'), parser=parser)
-        ns = {'default': 'http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5'}
+
+        ns_flgnet = {'default': 'http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5'}
+        ns_if = {'if': 'http://www.siemens.com/automation/Openness/SW/Interface/v5'}
 
         block_element = root.find(".//SW.Blocks.FB")
         if block_element is None: block_element = root.find(".//SW.Blocks.FC")
@@ -30,38 +25,70 @@ def parse_lad_fbd_file(file_path):
         if block_element is None: return None
 
         attribute_list = block_element.find("AttributeList")
-        # Robustly get the block name
-        block_name = get_multilingual_text(attribute_list, "Name")
-        if not block_name:
-            name_el = attribute_list.find("Name")
-            if name_el is not None: block_name = name_el.text
+        block_name = get_multilingual_text(attribute_list, "Name") or (attribute_list.find("Name").text if attribute_list.find("Name") is not None else "")
 
         plc_block = PlcBlock(name=block_name,
                              block_type=block_element.tag.split('.')[-1],
                              language=attribute_list.find("ProgrammingLanguage").text)
+
+        interface_el = attribute_list.find("Interface")
+        if interface_el is not None:
+            for section_el in interface_el.xpath("if:Sections/if:Section", namespaces=ns_if):
+                section_name = section_el.get("Name")
+                target_list = None
+                if section_name == "Input": target_list = plc_block.interface.input_members
+                elif section_name == "Output": target_list = plc_block.interface.output_members
+                elif section_name == "InOut": target_list = plc_block.interface.in_out_members
+                elif section_name == "Static": target_list = plc_block.interface.static_members
+                elif section_name == "Temp": target_list = plc_block.interface.temp_members
+
+                if target_list is not None:
+                    for member_el in section_el.findall("if:Member", namespaces=ns_if):
+                        comment_text = ""
+                        comment_el = member_el.find(".//MultilingualText[@CompositionName='Comment']//Text")
+                        if comment_el is not None and comment_el.text is not None: comment_text = comment_el.text
+                        member = InterfaceMember(name=member_el.get("Name"), data_type=member_el.get("Datatype"), comment=comment_text)
+                        target_list.append(member)
 
         for i, compile_unit in enumerate(block_element.findall(".//SW.Blocks.CompileUnit")):
             network = Network(number=i + 1,
                               title=get_multilingual_text(compile_unit, "Title"),
                               comment=get_multilingual_text(compile_unit, "Comment"))
 
-            flg_net = compile_unit.find(".//NetworkSource/*") # This should find the FlgNet element
+            flg_net = compile_unit.find(".//NetworkSource/*")
             if flg_net is not None:
-                for part_element in flg_net.xpath("./default:Parts/*", namespaces=ns):
-                    part = Part(uid=part_element.get('UId'), part_type=part_element.get('Name'))
-                    for con_element in part_element.findall('Con'):
-                        pin_name = con_element.get('Name')
-                        operand_components = con_element.xpath(".//Component[@Name]")
-                        operand = ".".join(c.get("Name") for c in operand_components)
-                        if pin_name: part.pins.append(Pin(name=pin_name, operand=operand))
+                # --- Final Corrected Robust Operand Parsing Logic ---
+                access_map = {
+                    acc_el.get('UId'): ".".join(c.get("Name") for c in acc_el.xpath("default:Symbol/default:Component", namespaces=ns_flgnet))
+                    for acc_el in flg_net.xpath("./default:Parts/default:Access", namespaces=ns_flgnet)
+                }
 
-                    if not part.pins and part.part_type in ['Contact', 'Coil']:
-                        operand_components = part_element.xpath(".//Component[@Name]")
-                        operand = ".".join(c.get("Name") for c in operand_components)
-                        part.pins.append(Pin(name="operand", operand=operand))
+                part_pins_map = {}
+                for wire_el in flg_net.xpath("./default:Wires/default:Wire", namespaces=ns_flgnet):
+                    ident_cons = wire_el.xpath("default:IdentCon", namespaces=ns_flgnet)
+                    name_cons = wire_el.xpath("default:NameCon", namespaces=ns_flgnet)
+
+                    if ident_cons and name_cons:
+                        access_uid = ident_cons[0].get('UId')
+                        part_uid = name_cons[0].get('UId')
+                        pin_name = name_cons[0].get('Name')
+
+                        if access_uid in access_map:
+                            operand = access_map[access_uid]
+                            part_pins_map.setdefault(part_uid, {})[pin_name] = operand
+
+                for part_element in flg_net.xpath("./default:Parts/default:Part", namespaces=ns_flgnet):
+                    part_uid = part_element.get('UId')
+                    part = Part(uid=part_uid, part_type=part_element.get('Name'))
+
+                    if part_uid in part_pins_map:
+                        for pin_name, operand in part_pins_map[part_uid].items():
+                            part.pins.append(Pin(name=pin_name, operand=operand))
+
                     network.parts.append(part)
+                # --- End of Logic ---
 
-                for wire_element in flg_net.xpath("./default:Wires/default:Wire", namespaces=ns):
+                for wire_element in flg_net.xpath("./default:Wires/default:Wire", namespaces=ns_flgnet):
                     connections = wire_element.getchildren()
                     if len(connections) >= 2:
                         start_node, end_node = connections[0], connections[1]
@@ -109,7 +136,6 @@ if __name__ == '__main__':
     import os
     print("--- Testing Parser Module ---")
 
-    # Construct the path to the sample file relative to this script's location
     base_dir = os.path.dirname(__file__)
     sample_file = os.path.abspath(os.path.join(base_dir, '..', '..', 'data', 'PLC_1', 'Program_blocks', 'BoilerAlarm.xml'))
 
@@ -121,28 +147,24 @@ if __name__ == '__main__':
         try:
             parsed_block = parse_lad_fbd_file(sample_file)
             if parsed_block:
-                print("\\n--- PARSE SUCCESS ---")
+                print("\n--- PARSE SUCCESS ---")
                 print(f"Block Name: {parsed_block.name}")
-                print(f"Block Type: {parsed_block.block_type}")
-                print(f"Language: {parsed_block.language}")
-                print(f"Number of Networks: {len(parsed_block.networks)}")
 
-                total_parts = sum(len(net.parts) for net in parsed_block.networks)
-                total_wires = sum(len(net.wires) for net in parsed_block.networks)
-
-                print(f"Total Parts (Instructions): {total_parts}")
-                print(f"Total Wires: {total_wires}")
-
-                if parsed_block.networks:
-                    net1 = parsed_block.networks[0]
-                    print("\\n--- Network 1 Details ---")
-                    print(f"  Title: {net1.title}")
-                    print(f"  Parts: {len(net1.parts)}")
-                    print(f"  Wires: {len(net1.wires)}")
-
+                # --- Test Operand Parsing ---
+                print("\n--- Network and Operand Details ---")
+                for i, network in enumerate(parsed_block.networks):
+                    if not network.parts: continue
+                    print(f"\n[Network {i+1}]")
+                    for part in network.parts:
+                        print(f"  Part: {part.part_type} (UID: {part.uid})")
+                        if not part.pins:
+                            print("    - No pins found.")
+                        for pin in part.pins:
+                            print(f"    - Pin: {pin.name}, Operand: '{pin.operand}'")
+                # --- End Test ---
             else:
-                print("\\n--- PARSE FAILED: The function returned None. ---")
+                print("\n--- PARSE FAILED: The function returned None. ---")
         except Exception as e:
-            print(f"\\n--- PARSE CRASHED: An exception occurred: {e} ---")
+            print(f"\n--- PARSE CRASHED: An exception occurred: {e} ---")
             import traceback
             traceback.print_exc()

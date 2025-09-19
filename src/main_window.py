@@ -2,7 +2,8 @@ import sys
 import os
 import traceback
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileSystemModel, QTreeView,
-                             QWidget, QSplitter, QMessageBox, QTextEdit)
+                             QWidget, QSplitter, QMessageBox, QTextEdit, QToolBar, QAction, QStyle, QFileDialog)
+from PyQt5.QtGui import QIcon, QImage, QPainter
 from PyQt5.QtCore import Qt
 from src.parser.parser import parse_lad_fbd_file, parse_tag_table_file
 from src.graphical_view import NetworkView
@@ -15,6 +16,14 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Siemens PLC Code Viewer")
         self.setGeometry(100, 100, 1200, 800)
+
+        # --- Toolbar for actions ---
+        toolbar = QToolBar("Main Toolbar")
+        self.addToolBar(toolbar)
+
+        export_action = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Export to PNG", self)
+        export_action.triggered.connect(self.export_view_to_image)
+        toolbar.addAction(export_action)
 
         self.project_path = project_path
         self.main_splitter = QSplitter(Qt.Horizontal)
@@ -42,6 +51,33 @@ class MainWindow(QMainWindow):
         self.main_splitter.addWidget(self.content_area)
         self.main_splitter.addWidget(self.properties_view)
         self.main_splitter.setSizes([250, 600, 350])
+
+    def export_view_to_image(self):
+        # Check if the current content widget is a NetworkView
+        if not isinstance(self.content_area, NetworkView):
+            QMessageBox.information(self, "Export Not Available", "There is no graphical view to export.")
+            return
+
+        # Open a file dialog to get the save path
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Image", "export.png", "PNG Images (*.png);;All Files (*)")
+
+        if file_path:
+            # Get the scene from the NetworkView
+            scene = self.content_area.scene()
+
+            # Use the scene's bounding rect to determine the image size
+            rect = scene.sceneRect()
+            image = QImage(rect.size().toSize(), QImage.Format_ARGB32)
+            image.fill(Qt.white) # Use white background for better visibility
+
+            painter = QPainter(image)
+            scene.render(painter)
+            painter.end()
+
+            if image.save(file_path):
+                QMessageBox.information(self, "Export Successful", f"Successfully exported view to:\n{file_path}")
+            else:
+                QMessageBox.critical(self, "Export Failed", "Failed to save the image.")
 
     def on_project_explorer_double_clicked(self, index):
         file_path = self.fs_model.filePath(index)
