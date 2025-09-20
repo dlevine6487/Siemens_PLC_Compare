@@ -9,3 +9,6 @@ __pycache__/
 
 # Temporary files
 temp_xml.xml
+
+# Test outputs
+tests/outputs/
