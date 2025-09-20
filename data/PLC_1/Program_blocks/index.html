@@ -440,7 +440,7 @@
             return tempSvg;
         }
 
-        // New, more robust function to get text from MultilingualText structures
+        // New, more robust function to get text from either MultilingualText structures or direct text content.
         function getMultilingualTextContent(parentElement, targetTagName) {
             if (!parentElement) {
                 return "";
@@ -450,9 +450,16 @@
             if (!targetElement) {
                 return "";
             }
-            // Then, within that targetElement, find the MultilingualText and its Text child
-            const textEl = targetElement.querySelector("MultilingualText Text");
-            return textEl ? textEl.textContent : "";
+
+            // Attempt to find the specific MultilingualText > Text structure first.
+            const multilingualTextEl = targetElement.querySelector("MultilingualText Text");
+            if (multilingualTextEl && multilingualTextEl.textContent) {
+                return multilingualTextEl.textContent;
+            }
+
+            // If that fails, fall back to the direct text content of the target element.
+            // This handles cases like <Name>BoilerAlarm</Name> directly.
+            return targetElement.textContent.trim();
         }
 
         function getAttribute(element, attributeName) {
@@ -641,6 +648,7 @@
                 attributeList.querySelector("ProgrammingLanguage")?.textContent || ""
             );
             console.log("Parsed PLC Block Name:", plcBlock.name, "Type:", plcBlock.blockType);
+            console.assert(plcBlock.name, `Assertion Failed: PLC Block name is empty or null. Check AttributeList > Name structure in the XML.`);
 
 
             // Parse Interface
@@ -677,7 +685,10 @@
                 const networkComment = getMultilingualTextContent(attrList, "Comment");
 
                 const network = new Network(networkCounter, networkTitle, networkComment);
-                console.log(`--- Parsing Network ${network.number}: ${network.title} ---`);
+                console.log(`--- Parsing Network ${network.number}: Title='${network.title}' ---`);
+                // Title and comment can be legitimately empty, so a simple log is better than an assertion.
+                console.assert(attrList, `Assertion Failed: Could not find AttributeList for CompileUnit of Network ${network.number}.`);
+
 
                 const networkSource = compileUnit.querySelector("NetworkSource");
                 if (networkSource) {
@@ -698,22 +709,43 @@
                         }
                     }
 
+                    console.assert(flgNet !== null, `Assertion Failed: FlgNet is null for Network ${network.number}. Check NetworkSource content.`);
                     if (flgNet) {
+                        console.log(`TRACE: Network ${network.number}: Entered if(flgNet) block.`);
+                        // CRITICAL DIAGNOSTIC: Log the exact FlgNet structure
+                        console.log(`DEBUG: Network ${network.number} FlgNet outerHTML (first 1000 chars):\n`, flgNet.outerHTML.substring(0, 1000) + "...");
+
                         // Define helper for getting elements based on the determined query method
                         const getFlgNetElements = (parent, tagName) => {
                             return useNamespacedQueriesForFlgNetChildren ?
                                 Array.from(parent.getElementsByTagNameNS(FLGNET_NS, tagName)) :
                                 Array.from(parent.querySelectorAll(tagName));
                         };
+                        console.log(`TRACE: Network ${network.number}: Defined getFlgNetElements helper.`);
 
+                        const accessElements = getFlgNetElements(flgNet, "Access");
+                        console.log(`TRACE: Network ${network.number}: Queried for Access elements.`);
+                        const partElements = getFlgNetElements(flgNet, "Part");
+                        console.log(`TRACE: Network ${network.number}: Queried for Part elements.`);
+                        const wireElements = getFlgNetElements(flgNet, "Wire");
+                        console.log(`TRACE: Network ${network.number}: Queried for Wire elements.`);
+
+                        console.log(`DEBUG: Network ${network.number} found ${partElements.length} Part(s), ${accessElements.length} Access(es), and ${wireElements.length} Wire(s).`);
+
+                        // This assertion is a general health check. If there are wires, there should be parts and accesses.
+                        // It's not a strict failure if this fails (e.g. empty network), but it's a strong warning sign.
+                        console.assert(wireElements.length === 0 || (partElements.length > 0 && accessElements.length > 0), `Assertion Warning: Network ${network.number} has ${wireElements.length} wires but seems to be missing parts or accesses. This could indicate a parsing issue.`);
+
+                        console.log(`TRACE: Network ${network.number}: Starting to build accessMap.`);
                         const accessMap = {};
-                        getFlgNetElements(flgNet, "Access").forEach(el => {
+                        accessElements.forEach(el => {
                             accessMap[getAttribute(el, "UId")] = getFlgNetElements(el, "Component").map(c => getAttribute(c, "Name")).join(".");
                         });
-                        // console.log("Access Map:", accessMap); 
+                        console.log(`TRACE: Network ${network.number}: Finished building accessMap.`);
 
+                        console.log(`TRACE: Network ${network.number}: Starting to build partPinsMap.`);
                         const partPinsMap = {};
-                        getFlgNetElements(flgNet, "Wire").forEach(wireEl => {
+                        wireElements.forEach(wireEl => {
                             const ident = getFlgNetElements(wireEl, "IdentCon")[0];
                             const name = getFlgNetElements(wireEl, "NameCon")[0];
                             if (ident && name && accessMap[getAttribute(ident, "UId")]) {
@@ -722,21 +754,24 @@
                                 partPinsMap[pUid][getAttribute(name, "Name")] = accessMap[getAttribute(ident, "UId")];
                             }
                         });
-                        // console.log("Part Pins Map (from wires):", partPinsMap);
+                        console.log(`TRACE: Network ${network.number}: Finished building partPinsMap.`);
 
-                        getFlgNetElements(flgNet, "Part").forEach(partEl => {
+                        console.log(`TRACE: Network ${network.number}: Starting to process parts.`);
+                        partElements.forEach(partEl => {
                             const pUid = getAttribute(partEl, "UId");
                             const part = new Part(pUid, getAttribute(partEl, "Name"));
                             if (partPinsMap[pUid]) {
                                 Object.entries(partPinsMap[pUid]).forEach(([pinName, operand]) => part.pins.push(new Pin(pinName, operand)));
+                                console.assert(part.pins.length > 0, `Assertion Failed: Part ${pUid} (${part.partType}) was expected to have pins from the partPinsMap, but its pins array is empty. Check wiring logic.`);
                             }
                             network.parts.push(part);
                         });
-                        // console.log("Parsed Parts:", network.parts); 
+                        console.log(`TRACE: Network ${network.number}: Finished processing parts.`);
 
 
                         // Wires (Simplified Flow for rendering connections)
-                        getFlgNetElements(flgNet, "Wire").forEach(wireEl => {
+                        console.log(`TRACE: Network ${network.number}: Starting to process wires for rendering flow.`);
+                        wireElements.forEach(wireEl => {
                             const cons = getFlgNetElements(wireEl, "Powerrail").concat(getFlgNetElements(wireEl, "NameCon")); // Combine potential connection elements
                             if (cons.length >= 2) {
                                 const getDet = (el, isFirst) => el.localName === "Powerrail" ? {uid:"Rail", n: isFirst?"out":"in"} : {uid:getAttribute(el,"UId"), n:getAttribute(el,"Name")};
@@ -744,6 +779,7 @@
                                 if(s.uid && e.uid) network.wires.push(new Wire(getAttribute(wireEl,"UId"), s.uid, s.n, e.uid, e.n));
                             }
                         });
+                        console.log(`TRACE: Network ${network.number}: Finished processing wires for rendering flow.`);
                         // console.log("Parsed Wires (flow):", network.wires); 
 
                     } else {
@@ -963,9 +999,13 @@
         }
 
         // Renders either a contact, coil, or instruction block
-        function renderPartGraphic(part, x, y) {
+        function renderPartGraphic(part, x, y) { // y is the RUNG_Y
             const group = document.createElementNS(SVG_NS, "g");
-            group.setAttribute("transform", `translate(${x}, ${y - part.calculatedHeight/2})`);
+
+            // For contacts/coils, we center them on the rung.
+            // For instruction blocks, we align the block so its EN pin's Y-coordinate matches the rung's Y.
+            const yOffset = /Contact|Coil/.test(part.partType) ? (part.calculatedHeight / 2) : (part.enPinY || part.calculatedHeight / 2);
+            group.setAttribute("transform", `translate(${x}, ${y - yOffset})`);
 
             if (part.partType === 'Contact') {
                 renderContactContent(group, part);
@@ -978,11 +1018,11 @@
         }
 
         const PIN_LINE_HEIGHT = 12; // Estimated line height for pin/operand text
-        const IN_BLOCK_PAD_H = 10; // Horizontal padding inside instruction block for text
+        const IN_BLOCK_PAD_H = 15; // Horizontal padding inside instruction block for text
         const IN_BLOCK_PAD_V = 10; // Vertical padding inside instruction block for text
-        const PIN_ELEMENT_GAP_H = 5; // Horizontal gap between pin name/terminal and operand/block edge
+        const PIN_ELEMENT_GAP_H = 8; // Horizontal gap between pin name/terminal and operand/block edge
         const PIN_TERMINAL_SIZE = 3; // Radius for circle terminal
-        const PIN_TERMINAL_WIRE_LENGTH = 10; // Length of wire connecting terminal to block
+        const PIN_TERMINAL_WIRE_LENGTH = 15; // Length of wire connecting terminal to block
         const MIN_CONTACT_COIL_VISUAL_WIDTH = 30; // Fixed visual width of the contact/coil lines/circle
         const MIN_BLOCK_RECT_WIDTH = 50; // Minimum width for the instruction block rectangle itself
         const MAX_OPERAND_WRAP_WIDTH = 100; // Max width before an operand wraps
@@ -1099,52 +1139,64 @@
 
         // Function to calculate dimensions of an instruction block including wrapped text
         function calculateInstructionBlockDimensions(part) {
-            const INSTRUCTION_TYPE_HEIGHT = estimateTextDimensions(part.partType, "part-type").height || 15; // Dynamic height for instruction type
+            const INSTRUCTION_TYPE_HEIGHT = estimateTextDimensions(part.partType, "part-type").height || 15;
+            const headerHeight = IN_BLOCK_PAD_V + INSTRUCTION_TYPE_HEIGHT + IN_BLOCK_PAD_V;
 
             let maxLeftLabelsWidth = 0;
             let maxRightLabelsWidth = 0;
-            let totalPinsVerticalSpace = 0; // Sum of operand heights
+            let totalInputPinsHeight = 0;
+            let totalOutputPinsHeight = 0;
+            let enPinY = 0; // Will store the calculated Y position of the EN pin for alignment
 
             const typeTextWidth = estimateTextDimensions(part.partType, "part-type").width;
 
+            // First pass: Calculate operand dimensions and total heights
             part.pins.forEach(pin => {
-                const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name); // Expanded heuristic
-                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
-
+                const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
                 const wrapped = wrapText(pin.operand, MAX_OPERAND_WRAP_WIDTH, "pin-operand", PIN_LINE_HEIGHT);
                 pin.wrappedOperand = wrapped.lines;
                 pin.operandWidth = wrapped.width;
-                pin.operandHeight = Math.max(PIN_LINE_HEIGHT, wrapped.height); // At least one line height
-
-                totalPinsVerticalSpace += pin.operandHeight; // Accumulate vertical space
-
-                // Calculate total width needed for: [PIN NAME TEXT] --- Block Edge --- WIRE --- (TERMINAL) --- GAP --- [OPERAND TEXT]
-                // This is the width from the outermost edge of the operand to the inner edge of the block where the pin name starts/ends.
-                // Re-evaluate: Max width of the labels *including* pin name and operand is for *outside* the block
-                // For internal pin names, we reserve IN_BLOCK_PAD_H width inside the block.
-                
-                const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
+                pin.operandHeight = Math.max(PIN_LINE_HEIGHT, wrapped.height);
 
                 if (isOutput) {
-                    maxRightLabelsWidth = Math.max(maxRightLabelsWidth, currentLabelSetWidth);
+                    totalOutputPinsHeight += pin.operandHeight;
                 } else {
-                    maxLeftLabelsWidth = Math.max(maxLeftLabelsWidth, currentLabelSetWidth);
+                    totalInputPinsHeight += pin.operandHeight;
                 }
             });
 
-            part.blockInternalRectWidth = Math.max(MIN_BLOCK_RECT_WIDTH, typeTextWidth + IN_BLOCK_PAD_H * 2);
-            // Total calculated width = Max left space + Internal block width + Max right space
-            part.calculatedWidth = maxLeftLabelsWidth + part.blockInternalRectWidth + maxRightLabelsWidth;
+            // Second pass: Calculate label widths and find EN pin Y coordinate
+            let currentYInput = headerHeight + IN_BLOCK_PAD_V;
+            part.pins.forEach(pin => {
+                 const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
+                if (isOutput) return; // Only process inputs in this loop
 
-            // Calculated height: Top padding + Type height + padding + total pins height + bottom padding
-            part.calculatedHeight = Math.max(
-                40, // Minimum height for the block
-                IN_BLOCK_PAD_V + INSTRUCTION_TYPE_HEIGHT + IN_BLOCK_PAD_V + totalPinsVerticalSpace + IN_BLOCK_PAD_V
-            ); 
+                if (pin.name === 'EN' || pin.name === 'REQ') { // Treat REQ like EN for alignment
+                    enPinY = currentYInput + (pin.operandHeight / 2);
+                }
+                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
+                const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
+                maxLeftLabelsWidth = Math.max(maxLeftLabelsWidth, currentLabelSetWidth);
+
+                currentYInput += pin.operandHeight;
+            });
+             part.pins.forEach(pin => {
+                const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
+                if (!isOutput) return; // Only process outputs
+                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
+                const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
+                maxRightLabelsWidth = Math.max(maxRightLabelsWidth, currentLabelSetWidth);
+            });
+
+
+            part.blockInternalRectWidth = Math.max(MIN_BLOCK_RECT_WIDTH, typeTextWidth + IN_BLOCK_PAD_H * 2);
+            part.calculatedWidth = maxLeftLabelsWidth + part.blockInternalRectWidth + maxRightLabelsWidth;
+            part.calculatedHeight = headerHeight + Math.max(totalInputPinsHeight, totalOutputPinsHeight) + IN_BLOCK_PAD_V * 2;
 
             part.maxLeftLabelsWidth = maxLeftLabelsWidth;
             part.maxRightLabelsWidth = maxRightLabelsWidth;
-            part.instructionTypeHeight = INSTRUCTION_TYPE_HEIGHT; 
+            part.instructionTypeHeight = INSTRUCTION_TYPE_HEIGHT;
+            part.enPinY = enPinY || (part.calculatedHeight / 2); // Fallback to center if no EN pin found
         }
 
 
@@ -1153,26 +1205,25 @@
             const rectX = part.maxLeftLabelsWidth; // Offset rectangle to make space for left-side labels
             const headerHeight = IN_BLOCK_PAD_V + part.instructionTypeHeight + IN_BLOCK_PAD_V; // Total height of the header area
 
-            // Header rectangle (top part of the block)
+            // Main body rectangle
+            const bodyRect = document.createElementNS(SVG_NS, "rect");
+            bodyRect.setAttribute("x", rectX);
+            bodyRect.setAttribute("y", 0);
+            bodyRect.setAttribute("width", part.blockInternalRectWidth);
+            bodyRect.setAttribute("height", part.calculatedHeight);
+            bodyRect.setAttribute("rx", 3); bodyRect.setAttribute("ry", 3);
+            bodyRect.classList.add("instruction-block-body");
+            group.appendChild(bodyRect);
+
+            // Header rectangle (drawn on top of the body)
             const headerRect = document.createElementNS(SVG_NS, "rect");
             headerRect.setAttribute("x", rectX);
             headerRect.setAttribute("y", 0);
             headerRect.setAttribute("width", part.blockInternalRectWidth);
             headerRect.setAttribute("height", headerHeight);
-            headerRect.setAttribute("rx", 3); headerRect.setAttribute("ry", 3); // Apply rounding
             headerRect.classList.add("instruction-block-header");
             group.appendChild(headerRect);
 
-            // Main body rectangle (rest of the block)
-            const bodyRect = document.createElementNS(SVG_NS, "rect");
-            bodyRect.setAttribute("x", rectX);
-            bodyRect.setAttribute("y", headerHeight); // Starts below the header
-            bodyRect.setAttribute("width", part.blockInternalRectWidth);
-            bodyRect.setAttribute("height", part.calculatedHeight - headerHeight);
-            // Reapply rounding to bottom corners only by drawing a full rectangle and then header on top
-            bodyRect.setAttribute("rx", 3); bodyRect.setAttribute("ry", 3); 
-            bodyRect.classList.add("instruction-block-body");
-            group.appendChild(bodyRect);
 
             // Part Type text (centered within the header rectangle)
             const typeText = document.createElementNS(SVG_NS, "text");
@@ -1189,8 +1240,6 @@
 
             part.pins.forEach(pin => {
                 const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
-                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
-
                 const pinY = (isOutput ? currentYOutput : currentYInput);
                 const currentOperandHeight = pin.operandHeight;
                 const pinCenterY = pinY + (currentOperandHeight / 2); // Vertical center for this pin row
@@ -1198,48 +1247,41 @@
                 // Pin Name (inside the block rectangle)
                 const pinNameText = document.createElementNS(SVG_NS, "text");
                 pinNameText.setAttribute("y", pinCenterY);
+                pinNameText.setAttribute("dominant-baseline", "middle"); // Center text on the line
                 pinNameText.classList.add("pin-name");
                 pinNameText.textContent = pin.name;
                 if (isOutput) {
                     pinNameText.setAttribute("x", rectX + part.blockInternalRectWidth - IN_BLOCK_PAD_H);
-                    pinNameText.setAttribute("text-anchor", "end"); // Right-aligned inside block
+                    pinNameText.setAttribute("text-anchor", "end");
                     currentYOutput += currentOperandHeight;
                 } else {
                     pinNameText.setAttribute("x", rectX + IN_BLOCK_PAD_H);
-                    pinNameText.setAttribute("text-anchor", "start"); // Left-aligned inside block
+                    pinNameText.setAttribute("text-anchor", "start");
                     currentYInput += currentOperandHeight;
                 }
                 group.appendChild(pinNameText);
 
-                let terminalCenterX;
-                let wireStartX;
-                let wireEndX;
-                let operandRenderX; // This will be the x for operand text start/end
+                let terminalCenterX, wireStartX, wireEndX, operandRenderX;
 
-                // Position elements relative to each other for Input/Output
                 if (isOutput) {
-                    // Output side: Block edge --- WIRE --- (Terminal) --- [Operand Text]
-                    wireStartX = rectX + part.blockInternalRectWidth; // Block right edge
-                    terminalCenterX = wireStartX + PIN_TERMINAL_WIRE_LENGTH; // Center of terminal
-                    operandRenderX = terminalCenterX + PIN_TERMINAL_SIZE + PIN_ELEMENT_GAP_H; // Start of operand text
-                    wireEndX = terminalCenterX; // Wire connects to terminal center
+                    wireStartX = rectX + part.blockInternalRectWidth;
+                    terminalCenterX = wireStartX + PIN_TERMINAL_WIRE_LENGTH;
+                    operandRenderX = terminalCenterX + PIN_TERMINAL_SIZE + PIN_ELEMENT_GAP_H;
+                    wireEndX = terminalCenterX;
                 } else {
-                    // Input side: [Operand Text] --- (Terminal) --- WIRE --- Block edge
-                    wireEndX = rectX; // Block left edge
-                    terminalCenterX = wireEndX - PIN_TERMINAL_WIRE_LENGTH; // Center of terminal
-                    operandRenderX = terminalCenterX - PIN_TERMINAL_SIZE - PIN_ELEMENT_GAP_H; // End of operand text
-                    wireStartX = terminalCenterX; // Wire connects to terminal center
+                    wireEndX = rectX;
+                    terminalCenterX = wireEndX - PIN_TERMINAL_WIRE_LENGTH;
+                    operandRenderX = terminalCenterX - PIN_TERMINAL_SIZE - PIN_ELEMENT_GAP_H;
+                    wireStartX = terminalCenterX;
                 }
 
-                // Pin Terminal (small circle)
                 const terminalCircle = document.createElementNS(SVG_NS, "circle");
-                terminalCircle.setAttribute("r", PIN_TERMINAL_SIZE); // Radius of the circle
+                terminalCircle.setAttribute("r", PIN_TERMINAL_SIZE);
                 terminalCircle.setAttribute("cy", pinCenterY);
                 terminalCircle.setAttribute("cx", terminalCenterX);
                 terminalCircle.classList.add("pin-terminal");
                 group.appendChild(terminalCircle);
 
-                // Wire segment connecting Terminal to Block
                 const terminalWire = document.createElementNS(SVG_NS, "line");
                 terminalWire.setAttribute("y1", pinCenterY);
                 terminalWire.setAttribute("y2", pinCenterY);
@@ -1250,15 +1292,18 @@
 
                 // Pin Operand (outside the block rectangle)
                 const operandTextGroup = document.createElementNS(SVG_NS, "text");
-                operandTextGroup.setAttribute("y", pinY); // Top of the operand text block
+                operandTextGroup.setAttribute("y", pinCenterY);
+                operandTextGroup.setAttribute("dominant-baseline", "middle"); // Vertically center the text group
                 operandTextGroup.classList.add("pin-operand");
+                operandTextGroup.setAttribute("text-anchor", isOutput ? "start" : "end");
 
                 pin.wrappedOperand.forEach((line, index) => {
                     const tspan = document.createElementNS(SVG_NS, "tspan");
                     tspan.textContent = line;
-                    tspan.setAttribute("dy", index === 0 ? 0 : PIN_LINE_HEIGHT);
-                    tspan.setAttribute("x", operandRenderX); // Apply calculated X
-                    tspan.setAttribute("text-anchor", isOutput ? "start" : "end"); // Apply calculated anchor
+                    tspan.setAttribute("x", operandRenderX);
+                    // This calculation centers a multi-line text block vertically around the pinCenterY
+                    const initialDy = -((pin.wrappedOperand.length - 1) / 2) * PIN_LINE_HEIGHT;
+                    tspan.setAttribute("dy", index === 0 ? `${initialDy}px` : `${PIN_LINE_HEIGHT}px`);
                     operandTextGroup.appendChild(tspan);
                 });
                 group.appendChild(operandTextGroup);
