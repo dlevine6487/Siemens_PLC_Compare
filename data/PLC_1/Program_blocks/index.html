@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siemens PLC Code Viewer PoC</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0; /* TIA Portal background */
+            color: #333;
+        }
+
+        #toolbar {
+            background-color: #fff;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+        }
+
+        button {
+            padding: 6px 12px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 3px;
+            white-space: nowrap; /* Prevent button text from wrapping */
+        }
+
+        button:hover {
+            background-color: #005a9c;
+        }
+
+        h1 {
+            color: #007acc; /* Siemens blue */
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-weight: bold;
+            color: #007acc;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* Collapsible details styling */
+        details {
+            margin-bottom: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 5px;
+        }
+
+        summary {
+            font-weight: bold;
+            padding: 10px 15px;
+            cursor: pointer;
+            outline: none;
+            background-color: #e9e9e9;
+            border-bottom: 1px solid #ddd;
+            border-radius: 5px 5px 0 0;
+            color: #333;
+        }
+
+        summary:hover {
+            background-color: #e0e0e0;
+        }
+
+        details[open] summary {
+            border-bottom-color: #e0e0e0;
+        }
+
+        /* Interface Table Styling */
+        #block-interface-content table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            padding: 0;
+            margin: 0;
+        }
+
+        #block-interface-content th,
+        #block-interface-content td {
+            border: 1px solid #eee; /* Lighter border for internal table */
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        #block-interface-content th {
+            background-color: #f5f5f5; /* Even lighter header for internal table */
+            font-weight: bold;
+            color: #555;
+        }
+
+        #block-interface-content .interface-section-header {
+            background-color: #dbeaf5; /* Lighter blue */
+            font-weight: bold;
+            color: #005a9c;
+        }
+
+        /* Networks Container Styling */
+        #networks-container {
+            border: 1px solid #ccc;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto; /* Allow horizontal scrolling if networks get very wide */
+            border-radius: 5px;
+        }
+
+        /* Error message styling */
+        .error-message {
+            color: #d32f2f; /* Red color */
+            background-color: #ffcdd2; /* Light red background */
+            border: 1px solid #d32f2f;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            white-space: pre-wrap; /* Preserve whitespace and allow wrapping for error details */
+            font-family: 'Consolas', 'Courier New', monospace; /* Monospace for error code */
+        }
+
+
+        /* SVG Specific Styles */
+        svg {
+            border: 1px dashed #eee; /* Visual separator for networks */
+            margin-bottom: 20px;
+            overflow: visible; /* Allow text to extend if needed */
+            min-width: 800px; /* Minimum width for the SVG canvas */
+        }
+
+        .network-title {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            fill: #333;
+        }
+
+        .network-comment {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 12px;
+            fill: #777;
+            font-style: italic;
+        }
+
+        .ladder-rail {
+            stroke: #000;
+            stroke-width: 2;
+        }
+
+        .ladder-wire {
+            stroke: #000;
+            stroke-width: 2;
+        }
+
+        .part-operand, .pin-operand {
+            font-family: 'Consolas', 'Courier New', monospace; /* Monospace for tags */
+            font-size: 10px;
+            fill: #000080; /* Dark blue for operands */
+        }
+
+        .part-type {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            fill: #333;
+            text-anchor: middle;
+        }
+        
+        .pin-name {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 9px;
+            fill: #555;
+        }
+        
+        .pin-terminal {
+            fill: #fff; /* White fill for the circle */
+            stroke: #000; /* Black border */
+            stroke-width: 1;
+        }
+
+        /* Styles for instruction blocks */
+        .instruction-block-body {
+            fill: #e0f0ff; /* Light blue */
+            stroke: #007acc; /* Siemens blue */
+            stroke-width: 1.5;
+        }
+        .instruction-block-header {
+            fill: #dbeaf5; /* Header blue */
+            stroke: #007acc;
+            stroke-width: 1.5;
+        }
+
+
+        /* Contact specific styling */
+        .contact-symbol {
+            stroke: #000;
+            stroke-width: 1.5;
+        }
+        .contact-operand {
+            font-size: 10px;
+            fill: #000080;
+            font-weight: bold;
+        }
+
+        /* Coil specific styling */
+        .coil-symbol {
+            fill: none;
+            stroke: #000;
+            stroke-width: 1.5;
+        }
+        .coil-operand {
+            font-size: 10px;
+            fill: #000080;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toolbar">
+        <button id="load-sample-btn">Load Built-in Sample</button>
+        <span>- OR -</span>
+        <label for="file-input">Select a TIA Portal XML file:</label>
+        <input type="file" id="file-input" accept=".xml">
+        <span id="file-name-display" style="margin-left: 10px; font-style: italic; color: #555;">No file chosen</span>
+    </div>
+
+    <h1>Siemens PLC Code Viewer Proof-of-Concept</h1>
+
+    <details id="block-info" open> <!-- Made collapsible -->
+        <summary id="block-summary-text">Block Details</summary>
+        <div id="block-interface-content">
+            <table><thead><tr><th>Name</th><th>Data Type</th><th>Comment</th></tr></thead><tbody></tbody></table>
+        </div>
+    </details>
+
+    <div id="networks-container">
+        <h2 class="section-title">Networks</h2>
+        <div id="runtime-error-display" class="error-message" style="display:none;"></div>
+        <p id="initial-instruction">Please load a TIA Portal XML file using the "Load Built-in Sample" or "Choose File" button above.</p>
+    </div>
+
+    <script>
+        console.log("Script Loaded and running."); // Diagnostic log at script start
+
+        // --- HARDCODED SAMPLE XML (for quick testing) ---
+        // Ensure no leading whitespace before <?xml
+        const sampleXmlString = `<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.Blocks.FB ID="0">
+    <AttributeList>
+      <Name>
+        <MultilingualText>
+          <LgID>en-US</LgID>
+          <Text>BoilerAlarm_Sample_FB</Text>
+        </MultilingualText>
+      </Name>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <Interface>
+        <Sections>
+          <Section Name="Input">
+            <Member Name="In_StartMotor" Datatype="Bool">
+              <AttributeList>
+                <Comment>
+                  <MultilingualText><LgID>en-US</LgID><Text>Input to start the motor</Text></MultilingualText>
+                </Comment>
+              </AttributeList>
+            </Member>
+            <Member Name="Alarm_Bit_from_Boiler_Control" Datatype="Bool">
+                <AttributeList><Comment><MultilingualText><LgID>en-US</LgID><Text>Input for an alarm condition from boiler control logic.</Text></MultilingualText></Comment></AttributeList>
+            </Member>
+            <Member Name="Very_Long_Input_Tag_Name_That_Needs_Wrapping" Datatype="DInt">
+                <AttributeList><Comment><MultilingualText><LgID>en-US</LgID><Text>A very long input tag name for testing wrapping.</Text></MultilingualText></Comment></AttributeList>
+            </Member>
+          </Section>
+          <Section Name="Output">
+            <Member Name="Out_MotorActive" Datatype="Bool">
+                <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Output indicating motor is active</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+            <Member Name="Return" Datatype="Int">
+                <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Return value for RD_SYS_T</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+            <Member Name="Boiler_Error" Datatype="Bool">
+                <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Indicates a boiler error state.</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+            <Member Name="Boiler_Status" Datatype="Word">
+                <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Current status word of the boiler.</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+          </Section>
+          <Section Name="InOut">
+            <Member Name="Current_Time" Datatype="DTL">
+                <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Current system time in DTL format.</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+            <Member Name="BoilerNum" Datatype="Int">
+                <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Boiler number for program alarm.</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+          </Section>
+          <Section Name="Static">
+            <Member Name="Alarm_Inst_DB" Datatype="Program_Alarm_DB">
+                 <AttributeList>
+                    <Comment><MultilingualText><LgID>en-US</LgID><Text>Instance DB for Program_Alarm</Text></MultilingualText></Comment>
+                </AttributeList>
+            </Member>
+          </Section>
+        </Sections>
+      </Interface>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.CompileUnit ID="1" CompositionName="CompileUnits">
+        <AttributeList>
+          <Title><MultilingualText><LgID>en-US</LgID><Text>Network 1: Read System Time</Text></MultilingualText></Title>
+          <Comment><MultilingualText><LgID>en-US</LgID><Text>Reads the current system time into 'Current_Time' and 'Return'.</Text></MultilingualText></Comment>
+        </AttributeList>
+        <NetworkSource>
+          <FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+            <Parts>
+              <Access Scope="LocalVariable" UId="102"><Symbol><Component Name="Current_Time" /></Symbol></Access>
+              <Access Scope="LocalVariable" UId="103"><Symbol><Component Name="Return" /></Symbol></Access>
+              <Access Scope="LocalVariable" UId="104"><Symbol><Component Name="In_StartMotor" /></Symbol></Access>
+              <Access Scope="LocalVariable" UId="105a"><Symbol><Component Name="Long_Contact_Operand_Tag_That_Needs_More_Space" /></Symbol></Access>
+              <Part Name="Contact" UId="105b"><TemplateValue/></Part>
+              <Part Name="RD_SYS_T" UId="101">
+                <TemplateValue>
+                  <Sections>
+                    <Section Name="Input"><Member Name="EN" Datatype="Bool" /><Member Name="REQ" Datatype="Bool" /></Section> <!-- REQ added for RD_SYS_T -->
+                    <Section Name="Output"><Member Name="ENO" Datatype="Bool" /><Member Name="RET_VAL" Datatype="Int" /><Member Name="OUT" Datatype="DTL" /></Section>
+                  </Sections>
+                </TemplateValue>
+              </Part>
+            </Parts>
+            <Wires>
+              <Wire UId="105c"><Powerrail /><NameCon UId="105b" Name="in" /></Wire>
+              <Wire UId="105d"><IdentCon UId="105a" /><NameCon UId="105b" Name="operand" /></Wire>
+              <Wire UId="105e"><NameCon UId="105b" Name="out" /><NameCon UId="101" Name="EN" /></Wire>
+              <Wire UId="106a"><Powerrail /><NameCon UId="101" Name="REQ" /></Wire> <!-- REQ connection -->
+              <Wire UId="107"><NameCon UId="101" Name="RET_VAL" /><IdentCon UId="103" /></Wire>
+              <Wire UId="108"><NameCon UId="101" Name="OUT" /><IdentCon UId="102" /></Wire>
+              <Wire UId="109"><NameCon UId="101" Name="ENO" /><Powerrail /></Wire>
+            </Wires>
+          </FlgNet>
+        </NetworkSource>
+      </SW.Blocks.CompileUnit>
+
+              <SW.Blocks.CompileUnit ID="200" CompositionName="CompileUnits">
+                <AttributeList>
+                  <Title><MultilingualText><LgID>en-US</LgID><Text>Network 2: Boiler Program Alarm</Text></MultilingualText></Title>
+                  <Comment><MultilingualText><LgID>en-US</LgID><Text>Manages a program alarm based on boiler conditions.</Text></MultilingualText></Comment>
+                </AttributeList>
+                <NetworkSource>
+                  <FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+                    <Parts>
+                      <Access Scope="LocalVariable" UId="201"><Symbol><Component Name="Alarm_Inst_DB" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="202"><Symbol><Component Name="Alarm_Bit_from_Boiler_Control" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="203"><Symbol><Component Name="Current_Time" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="204"><Symbol><Component Name="BoilerNum" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="205"><Symbol><Component Name="Boiler_Error" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="206"><Symbol><Component Name="Boiler_Status" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="207"><Symbol><Component Name="Very_Long_Input_Tag_Name_That_Needs_Wrapping" /></Symbol></Access>
+                      <Access Scope="LocalVariable" UId="208"><Symbol><Component Name="This_is_an_extremely_long_output_tag_that_should_definitely_wrap_over_multiple_lines_to_be_visible" /></Symbol></Access>
+                      <Part Name="Program_Alarm" UId="209">
+                        <TemplateValue>
+                          <Sections>
+                            <Section Name="Input"><Member Name="EN" Datatype="Bool" /><Member Name="SIG" Datatype="Bool" /><Member Name="TIMESTAMP" Datatype="DTL" /><Member Name="SD_1" Datatype="DInt" /><Member Name="LONG_IN_PIN" Datatype="DInt" /></Section>
+                            <Section Name="Output"><Member Name="ENO" Datatype="Bool" /><Member Name="ERROR" Datatype="Bool" /><Member Name="STATUS" Datatype="Word" /><Member Name="LONG_OUT_PIN" Datatype="Int" /></Section>
+                          </Sections>
+                        </TemplateValue>
+                      </Part>
+                    </Parts>
+                    <Wires>
+                      <Wire UId="210"><Powerrail /><NameCon UId="209" Name="EN" /></Wire>
+                      <Wire UId="211"><IdentCon UId="202" /><NameCon UId="209" Name="SIG" /></Wire>
+                      <Wire UId="212"><IdentCon UId="203" /><NameCon UId="209" Name="TIMESTAMP" /></Wire>
+                      <Wire UId="213"><IdentCon UId="204" /><NameCon UId="209" Name="SD_1" /></Wire>
+                      <Wire UId="214"><IdentCon UId="207" /><NameCon UId="209" Name="LONG_IN_PIN" /></Wire>
+                      <Wire UId="215"><NameCon UId="209" Name="ENO" /><Powerrail /></Wire>
+                      <Wire UId="216"><NameCon UId="209" Name="ERROR" /><IdentCon UId="205" /></Wire>
+                      <Wire UId="217"><NameCon UId="209" Name="STATUS" /><IdentCon UId="206" /></Wire>
+                      <Wire UId="218"><NameCon UId="209" Name="LONG_OUT_PIN" /><IdentCon UId="208" /></Wire>
+                    </Wires>
+                  </FlgNet>
+                </NetworkSource>
+              </SW.Blocks.CompileUnit>
+
+              <SW.Blocks.CompileUnit ID="300" CompositionName="CompileUnits">
+                <AttributeList>
+                  <Title><MultilingualText><LgID>en-US</LgID><Text>Network 3: Empty Network Example</Text></MultilingualText></Title>
+                  <Comment><MultilingualText><LgID>en-US</LgID><Text>This network contains no logic parts.</Text></MultilingualText></Comment>
+                </AttributeList>
+                <NetworkSource>
+                  <FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+                    <!-- No parts here -->
+                  </FlgNet>
+                </NetworkSource>
+              </SW.Blocks.CompileUnit>
+
+            </ObjectList>
+          </SW.Blocks.FB>
+        </Document>
+`;
+
+        // --- Utility Functions ---
+        const SVG_NS = "http://www.w3.org/2000/svg";
+        const FLGNET_NS = "http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5";
+        let tempSvg;
+
+        function getTempSvg() {
+            if (!tempSvg) {
+                tempSvg = document.createElementNS(SVG_NS, "svg");
+                tempSvg.style.position = "absolute";
+                tempSvg.style.visibility = "hidden";
+                tempSvg.style.fontSize = "10px"; /* Ensure consistent font size for measurement */
+                document.body.appendChild(tempSvg);
+            }
+            return tempSvg;
+        }
+
+        // New, more robust function to get text from MultilingualText structures
+        function getMultilingualTextContent(parentElement, targetTagName) {
+            if (!parentElement) {
+                return "";
+            }
+            // First, find the targetTagName element (e.g., <Name>, <Title>, <Comment>)
+            const targetElement = parentElement.querySelector(targetTagName);
+            if (!targetElement) {
+                return "";
+            }
+            // Then, within that targetElement, find the MultilingualText and its Text child
+            const textEl = targetElement.querySelector("MultilingualText Text");
+            return textEl ? textEl.textContent : "";
+        }
+
+        function getAttribute(element, attributeName) {
+            return element ? element.getAttribute(attributeName) : "";
+        }
+
+        function estimateTextDimensions(text, cssClass) {
+            const svg = getTempSvg();
+            const textElement = document.createElementNS(SVG_NS, "text");
+            textElement.textContent = text || "";
+            textElement.classList.add(cssClass);
+            svg.appendChild(textElement);
+            let bbox = { width: 0, height: 0 };
+            try { bbox = textElement.getBBox(); } catch (e) { /* console.warn("Could not getBBox for text:", text, e); */ }
+            svg.removeChild(textElement);
+            return { width: bbox.width, height: bbox.height || 12 }; // Default height if not available
+        }
+
+        // Wraps text into multiple lines
+        function wrapText(text, maxWidth, cssClass, lineHeight = 12) {
+            if (!text) return { lines: [], width: 0, height: 0 };
+            const words = text.split(/(\s+)/).filter(w => w.trim().length > 0); // Split by whitespace, keep words
+            let currentLine = '';
+            let lines = [];
+            let maxLineWidth = 0;
+
+            words.forEach(word => {
+                const testLine = currentLine === '' ? word : currentLine + ' ' + word;
+                const { width } = estimateTextDimensions(testLine, cssClass);
+
+                if (width > maxWidth && currentLine !== '') {
+                    lines.push(currentLine.trim());
+                    maxLineWidth = Math.max(maxLineWidth, estimateTextDimensions(currentLine.trim(), cssClass).width);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            });
+
+            if (currentLine.trim()) {
+                lines.push(currentLine.trim());
+                maxLineWidth = Math.max(maxLineWidth, estimateTextDimensions(currentLine.trim(), cssClass).width);
+            }
+
+            return { lines: lines, width: maxLineWidth, height: lines.length * lineHeight };
+        }
+
+        // --- Data Model ---
+        class Pin {
+            constructor(name, operand = "") {
+                this.name = name; this.operand = operand;
+                this.wrappedOperand = []; this.operandWidth = 0; this.operandHeight = 0;
+            }
+        }
+        class Part {
+            constructor(uid, partType) {
+                this.uid = uid; this.partType = partType; this.pins = [];
+                this.calculatedWidth = 0; this.calculatedHeight = 0;
+                this.blockInternalRectWidth = 0; // For instruction blocks
+                this.maxLeftLabelsWidth = 0;     // For instruction blocks
+                this.maxRightLabelsWidth = 0;    // For instruction blocks
+            }
+        }
+        class Wire {
+            constructor(uid, startPart, startConn, endPart, endConn) {
+                this.uid = uid; this.startPart = startPart; this.startConn = startConn; this.endPart = endPart; this.endConn = endConn;
+            }
+        }
+        class Network {
+            constructor(number, title = "", comment = "") {
+                this.number = number; this.title = title; this.comment = comment;
+                this.parts = []; this.wires = []; 
+            }
+        }
+        class InterfaceMember {
+            constructor(name, dataType, comment = "") {
+                this.name = name; this.dataType = dataType; this.comment = comment;
+            }
+        }
+        class BlockInterface {
+            constructor() {
+                this.inputMembers = []; this.outputMembers = []; this.inOutMembers = [];
+                this.staticMembers = []; this.tempMembers = [];
+            }
+        }
+        class PlcBlock {
+            constructor(name, blockType, language) {
+                this.name = name; this.blockType = blockType; this.language = language;
+                this.interface = new BlockInterface(); this.networks = [];
+            }
+        }
+
+        // --- XML Content Cleaning ---
+        // This function cleans up common malformed namespace URIs found in TIA Portal XML exports.
+        // It's crucial for DOMParser to correctly interpret the XML.
+        function cleanXmlContent(xmlString) {
+            let cleaned = xmlString;
+            // Remove BOM if present (some editors add it)
+            if (cleaned.charCodeAt(0) === 0xFEFF) {
+                cleaned = cleaned.substring(1);
+            }
+            // Use trim() to remove all leading/trailing whitespace, including newlines
+            cleaned = cleaned.trim(); 
+
+            // Replace known malformed URIs
+            cleaned = cleaned.replace(/xmlns="http:\/\/www\.siemens\.com\/automation\/Openness\/SW\/[\r\n\s]*Interface\/v5"/g, 'xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5"');
+            cleaned = cleaned.replace(/xmlns="http:\/\/www\.siemens\.com\/automation\/Openness\/SW\/NetworkSource\/FlgNet\/[\r\n\s]*v5"/g, 'xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5"');
+            cleaned = cleaned.replace(/Openne[\r\n\s]*ss/g, 'Openness'); // e.g., "Openne\nss" to "Openness"
+            cleaned = cleaned.replace(/SW\/[\r\n\s]*Interface/g, 'SW/Interface');
+            cleaned = cleaned.replace(/Block[\r\n\s]*Types/g, 'BlockTypes');
+            cleaned = cleaned.replace(/NetworkSource\/FlgNet\/[\r\n\s]*v5/g, 'NetworkSource/FlgNet/v5');
+            // Add any other known problematic replacements here based on your XML files.
+            
+            return cleaned;
+        }
+
+
+        // --- Parser ---
+        function parseXmlContent(xmlContent) {
+            console.log("DEBUG: Input XML Content (first 500 chars):\n", xmlContent.substring(0, 500) + "..."); // Debug log
+
+            const cleanedXmlContent = cleanXmlContent(xmlContent);
+            console.log("DEBUG: Cleaned XML Content (first 500 chars):\n", cleanedXmlContent.substring(0, 500) + "..."); // Debug log
+
+            // CRITICAL DIAGNOSTIC: Check leading chars after cleaning
+            if (!cleanedXmlContent.startsWith("<?xml")) {
+                let diagnosticMessage = `Cleaned XML does NOT start with '<?xml'. First char code: ${cleanedXmlContent.charCodeAt(0)} ('${cleanedXmlContent.charAt(0)}')`;
+                if (cleanedXmlContent.length > 1) {
+                    diagnosticMessage += `, Second char code: ${cleanedXmlContent.charCodeAt(1)} ('${cleanedXmlContent.charAt(1)}')`;
+                }
+                console.error("XML PRE-PARSE ERROR:", diagnosticMessage);
+                displayErrorMessage(`XML pre-parse failed: ${diagnosticMessage}. Content:\n${cleanedXmlContent.substring(0, 200)}...`);
+                return null;
+            }
+
+
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(cleanedXmlContent, "application/xml");
+
+            const errorNode = xmlDoc.documentElement;
+            if (errorNode && errorNode.nodeName === "parsererror") {
+                const errorMessage = errorNode.textContent || "Unknown XML parsing error.";
+                console.error("DOMParser Error:", errorMessage);
+                displayErrorMessage(`Failed to parse XML: ${errorMessage}`);
+                return null;
+            }
+            console.log("DEBUG: xmlDoc.documentElement.nodeName:", xmlDoc.documentElement.nodeName); // Debug log
+            console.log("DEBUG: xmlDoc.documentElement.outerHTML (first 1000 chars):\n", xmlDoc.documentElement.outerHTML.substring(0, 1000) + "..."); // Debug log
+
+            // Explicitly check for expected root element, not just parsererror
+            if (xmlDoc.documentElement.nodeName !== "Document") {
+                const errorMessage = `Unexpected root element: '${xmlDoc.documentElement.nodeName}'. Expected 'Document'. This indicates a fundamental XML parsing issue.`;
+                console.error("XML Root Element Error:", errorMessage);
+                displayErrorMessage(errorMessage);
+                return null;
+            }
+
+
+            let blockElement = null;
+            ["SW.Blocks.FB", "SW.Blocks.FC", "SW.Blocks.OB"].some(tag => {
+                const elements = xmlDoc.getElementsByTagName(tag);
+                if (elements.length > 0) { blockElement = elements[0]; return true; }
+                return false;
+            });
+
+            if (!blockElement) {
+                console.error("No SW.Blocks.FB, FC, or OB element found in the XML.");
+                displayErrorMessage("No recognized PLC block (FB, FC, OB) found in the XML. Ensure it's a valid TIA Portal block export.");
+                return null;
+            }
+            console.log("Found block element:", blockElement.tagName);
+            console.log("DEBUG: blockElement innerHTML (first 500 chars):\n", blockElement.innerHTML.substring(0, 500) + "..."); // Debug log
+
+            const attributeList = blockElement.querySelector("AttributeList");
+            if (!attributeList) {
+                console.error("AttributeList not found for block:", blockElement.tagName);
+                displayErrorMessage(`AttributeList not found for the PLC block (${blockElement.tagName}). Cannot parse block details.`);
+                return null;
+            }
+            console.log("DEBUG: attributeList innerHTML (first 500 chars):\n", attributeList.innerHTML.substring(0, 500) + "..."); // Debug log
+
+
+            const plcBlock = new PlcBlock(
+                getMultilingualTextContent(attributeList, "Name"), // Use improved helper
+                blockElement.tagName.split(".").pop(),
+                attributeList.querySelector("ProgrammingLanguage")?.textContent || ""
+            );
+            console.log("Parsed PLC Block Name:", plcBlock.name, "Type:", plcBlock.blockType);
+
+
+            // Parse Interface
+            const interfaceEl = attributeList.querySelector("Interface");
+            if (interfaceEl) {
+                interfaceEl.querySelectorAll("Section").forEach(sectionEl => {
+                    const sectionName = getAttribute(sectionEl, "Name");
+                    let targetList = ({
+                        "Input": plcBlock.interface.inputMembers, "Output": plcBlock.interface.outputMembers,
+                        "InOut": plcBlock.interface.inOutMembers, "Static": plcBlock.interface.staticMembers,
+                        "Temp": plcBlock.interface.tempMembers
+                    })[sectionName];
+
+                    if (targetList) {
+                        sectionEl.querySelectorAll("Member").forEach(memberEl => {
+                            targetList.push(new InterfaceMember(
+                                getAttribute(memberEl, "Name"),
+                                getAttribute(memberEl, "Datatype"),
+                                getMultilingualTextContent(memberEl.querySelector("AttributeList"), "Comment") // Use improved helper
+                            ));
+                        });
+                    }
+                });
+            }
+            console.log("Parsed Interface:", plcBlock.interface);
+
+            // Parse Networks
+            let networkCounter = 0;
+            Array.from(xmlDoc.querySelectorAll("SW\\.Blocks\\.CompileUnit")).forEach(compileUnit => {
+                networkCounter++;
+                const attrList = compileUnit.querySelector("AttributeList");
+                
+                const networkTitle = getMultilingualTextContent(attrList, "Title");
+                const networkComment = getMultilingualTextContent(attrList, "Comment");
+
+                const network = new Network(networkCounter, networkTitle, networkComment);
+                console.log(`--- Parsing Network ${network.number}: ${network.title} ---`);
+
+                const networkSource = compileUnit.querySelector("NetworkSource");
+                if (networkSource) {
+                    let flgNet = null;
+                    let useNamespacedQueriesForFlgNetChildren = true;
+
+                    // 1. Try to find FlgNet with namespace (most correct)
+                    const namespacedFlgNets = networkSource.getElementsByTagNameNS(FLGNET_NS, "FlgNet");
+                    if (namespacedFlgNets.length > 0) {
+                        flgNet = namespacedFlgNets[0];
+                        console.log(`Network ${network.number}: Found FlgNet using namespaced query.`);
+                    } else {
+                        // 2. Fallback: Try to find FlgNet without namespace (handles DOMParser quirks)
+                        flgNet = networkSource.querySelector("FlgNet");
+                        if (flgNet) {
+                             console.warn(`Network ${network.number}: Found FlgNet using non-namespaced querySelector. Subsequent queries for its children will also be non-namespaced.`);
+                             useNamespacedQueriesForFlgNetChildren = false; // Flag to use non-namespaced queries for children
+                        }
+                    }
+
+                    if (flgNet) {
+                        // Define helper for getting elements based on the determined query method
+                        const getFlgNetElements = (parent, tagName) => {
+                            return useNamespacedQueriesForFlgNetChildren ?
+                                Array.from(parent.getElementsByTagNameNS(FLGNET_NS, tagName)) :
+                                Array.from(parent.querySelectorAll(tagName));
+                        };
+
+                        const accessMap = {};
+                        getFlgNetElements(flgNet, "Access").forEach(el => {
+                            accessMap[getAttribute(el, "UId")] = getFlgNetElements(el, "Component").map(c => getAttribute(c, "Name")).join(".");
+                        });
+                        // console.log("Access Map:", accessMap); 
+
+                        const partPinsMap = {};
+                        getFlgNetElements(flgNet, "Wire").forEach(wireEl => {
+                            const ident = getFlgNetElements(wireEl, "IdentCon")[0];
+                            const name = getFlgNetElements(wireEl, "NameCon")[0];
+                            if (ident && name && accessMap[getAttribute(ident, "UId")]) {
+                                const pUid = getAttribute(name, "UId");
+                                if (!partPinsMap[pUid]) partPinsMap[pUid] = {};
+                                partPinsMap[pUid][getAttribute(name, "Name")] = accessMap[getAttribute(ident, "UId")];
+                            }
+                        });
+                        // console.log("Part Pins Map (from wires):", partPinsMap);
+
+                        getFlgNetElements(flgNet, "Part").forEach(partEl => {
+                            const pUid = getAttribute(partEl, "UId");
+                            const part = new Part(pUid, getAttribute(partEl, "Name"));
+                            if (partPinsMap[pUid]) {
+                                Object.entries(partPinsMap[pUid]).forEach(([pinName, operand]) => part.pins.push(new Pin(pinName, operand)));
+                            }
+                            network.parts.push(part);
+                        });
+                        // console.log("Parsed Parts:", network.parts); 
+
+
+                        // Wires (Simplified Flow for rendering connections)
+                        getFlgNetElements(flgNet, "Wire").forEach(wireEl => {
+                            const cons = getFlgNetElements(wireEl, "Powerrail").concat(getFlgNetElements(wireEl, "NameCon")); // Combine potential connection elements
+                            if (cons.length >= 2) {
+                                const getDet = (el, isFirst) => el.localName === "Powerrail" ? {uid:"Rail", n: isFirst?"out":"in"} : {uid:getAttribute(el,"UId"), n:getAttribute(el,"Name")};
+                                const s = getDet(cons[0], true), e = getDet(cons[1], false);
+                                if(s.uid && e.uid) network.wires.push(new Wire(getAttribute(wireEl,"UId"), s.uid, s.n, e.uid, e.n));
+                            }
+                        });
+                        // console.log("Parsed Wires (flow):", network.wires); 
+
+                    } else {
+                        console.error(`Network ${network.number}: FlgNet element not found within NetworkSource. This network will appear empty.`);
+                        // Fallback: If FlgNet is crucial and not found, maybe create a placeholder network or skip it
+                        // For now, it will just proceed with an empty 'parts' array, resulting in an empty rung visually.
+                    }
+                } else {
+                     console.error(`Network ${network.number}: NetworkSource element not found. This network will appear empty.`);
+                }
+                plcBlock.networks.push(network);
+            });
+            return plcBlock;
+        }
+
+        // --- Renderers ---
+        function displayErrorMessage(message) {
+            const errorDisplay = document.getElementById("runtime-error-display");
+            errorDisplay.innerHTML = `<strong>Parsing/Rendering Error:</strong><br>${message}`;
+            errorDisplay.style.display = "block";
+            // Clear block details and networks
+            document.getElementById("block-summary-text").textContent = "Block Details (Error)";
+            document.querySelector("#block-interface-content table tbody").innerHTML = "";
+            document.getElementById("networks-container").querySelectorAll("svg").forEach(svg => svg.remove());
+            const networksH2 = document.getElementById("networks-container").querySelector("h2");
+            if (!networksH2) { 
+                 const newH2 = document.createElement("h2");
+                 newH2.classList.add("section-title");
+                 newH2.textContent = "Networks";
+                 document.getElementById("networks-container").prepend(newH2);
+            }
+            // Ensure the error message is correctly positioned below the Networks H2
+            networksH2.after(errorDisplay); 
+            document.getElementById("initial-instruction").style.display = "none"; 
+        }
+
+        function clearErrorMessage() {
+            const errorDisplay = document.getElementById("runtime-error-display");
+            errorDisplay.style.display = "none";
+            errorDisplay.textContent = "";
+            document.getElementById("initial-instruction").style.display = "block"; 
+        }
+
+        function processAndRender(xmlContent) {
+            clearErrorMessage(); 
+            // Clear previous content and reset UI elements
+            const networksContainer = document.getElementById("networks-container");
+            Array.from(networksContainer.querySelectorAll("svg")).forEach(s => s.remove());
+            document.querySelector("#block-interface-content table tbody").innerHTML = "";
+
+            // Reset summary text
+            document.getElementById("block-summary-text").textContent = "Block Details";
+
+            const plcBlock = parseXmlContent(xmlContent);
+            if (!plcBlock) {
+                return; // Error already handled by parseXmlContent
+            }
+
+            // Hide initial instruction as content is now loaded
+            document.getElementById("initial-instruction").style.display = "none";
+
+            // Update summary text
+            document.getElementById("block-summary-text").textContent = `Block Details: ${plcBlock.name} (${plcBlock.blockType})`;
+
+            // Render Interface
+            const tbody = document.querySelector("#block-interface-content table tbody");
+            Object.entries({
+                "Input": plcBlock.interface.inputMembers,
+                "Output": plcBlock.interface.outputMembers,
+                "InOut": plcBlock.interface.inOutMembers, 
+                "Static": plcBlock.interface.staticMembers,
+                "Temp": plcBlock.interface.tempMembers
+            }).forEach(([title, members]) => {
+                if (members.length === 0) return;
+                const h = tbody.insertRow().insertCell();
+                h.colSpan = 3;
+                h.className = "interface-section-header";
+                h.textContent = title;
+                members.forEach(m => {
+                    const r = tbody.insertRow();
+                    r.insertCell().textContent = m.name;
+                    r.insertCell().textContent = m.dataType;
+                    r.insertCell().textContent = m.comment;
+                });
+            });
+
+            // Render Networks
+            Array.from(networksContainer.querySelectorAll("svg")).forEach(s => s.remove()); // Clear existing network SVGs
+
+            plcBlock.networks.forEach(network => {
+                const RUNG_Y = 75; // Y-coordinate for the main rung line
+                const RAIL_L_X = 50; // X-coordinate for the left power rail
+                const RAIL_R_BUF = 50; // Buffer space from the rightmost part to the right power rail
+                const PART_PAD_H = 15; // Horizontal padding between parts (minimal wire segment length)
+
+                // 1. Pre-calculate dimensions for all parts in the network
+                network.parts.forEach(p => {
+                    if (/Contact|Coil/.test(p.partType)) {
+                        calculateContactCoilDimensions(p); // Call new specific function
+                    } else {
+                        calculateInstructionBlockDimensions(p);
+                    }
+                });
+
+                // 2. Determine total SVG width and height needed for this network
+                let currentTotalContentWidth = RAIL_L_X;
+                let maxNetworkHeightForBlocks = 0;
+
+                // Ensure network.parts is an array and not undefined
+                const partsToRender = Array.isArray(network.parts) ? network.parts : [];
+
+                partsToRender.forEach(part => {
+                    currentTotalContentWidth += part.calculatedWidth + PART_PAD_H;
+                    if (part.calculatedHeight > maxNetworkHeightForBlocks) {
+                        maxNetworkHeightForBlocks = part.calculatedHeight;
+                    }
+                });
+                
+                let totalNetworkWidth = currentTotalContentWidth + RAIL_R_BUF;
+                const SVG_MIN_VIEWPORT_WIDTH = 800; // Minimum visual width for the SVG viewport
+                const SVG_MAX_HEIGHT_WITH_MARGINS = maxNetworkHeightForBlocks + 80; // block height + top/bottom margin for text/rung
+
+                const SVG_W = Math.max(SVG_MIN_VIEWPORT_WIDTH, totalNetworkWidth);
+                const SVG_H = Math.max(150, SVG_MAX_HEIGHT_WITH_MARGINS); // Ensure min 150 height for basic networks
+
+                const svg = document.createElementNS(SVG_NS, "svg");
+                svg.setAttribute("width", SVG_W);
+                svg.setAttribute("height", SVG_H);
+                svg.setAttribute("viewBox", `0 0 ${SVG_W} ${SVG_H}`);
+                svg.style.display = "block";
+
+                // Draw Network Title/Comments
+                // Changed to use the network title and comment directly without redundancy.
+                // The network object should now hold just title and comment once from parsing.
+                const networkTitleText = document.createElementNS(SVG_NS, "text");
+                networkTitleText.setAttribute("x", RAIL_L_X);
+                networkTitleText.setAttribute("y", 20);
+                networkTitleText.classList.add("network-title");
+                networkTitleText.textContent = `Network ${network.number}: ${network.title || ''}`;
+                svg.appendChild(networkTitleText);
+
+                const networkCommentText = document.createElementNS(SVG_NS, "text");
+                networkCommentText.setAttribute("x", RAIL_L_X);
+                networkCommentText.setAttribute("y", 35);
+                networkCommentText.classList.add("network-comment");
+                networkCommentText.textContent = network.comment || '';
+                svg.appendChild(networkCommentText);
+
+
+                // Draw Rails
+                const actualRailRightX = SVG_W - 50; // X-coordinate for the right power rail
+                [RAIL_L_X, actualRailRightX].forEach(x => {
+                    const l = document.createElementNS(SVG_NS, "line");
+                    l.setAttribute("x1", x); l.setAttribute("y1", RUNG_Y-50);
+                    l.setAttribute("x2", x); l.setAttribute("y2", RUNG_Y+50);
+                    l.classList.add("ladder-rail"); svg.appendChild(l);
+                });
+
+                let currentXPositionForParts = RAIL_L_X;
+                if (partsToRender.length === 0) {
+                     const straightWire = document.createElementNS(SVG_NS, "line");
+                    straightWire.setAttribute("x1", RAIL_L_X);
+                    straightWire.setAttribute("y1", RUNG_Y);
+                    straightWire.setAttribute("x2", actualRailRightX);
+                    straightWire.setAttribute("y2", RUNG_Y);
+                    straightWire.classList.add("ladder-wire"); svg.appendChild(straightWire);
+                } else {
+                    partsToRender.forEach((part, index) => {
+                        const partStartRenderX = currentXPositionForParts + PART_PAD_H;
+
+                        // Determine the X-coordinate of the block's actual connection point for the incoming wire
+                        let blockConnectionPointX;
+                        if (/Contact|Coil/.test(part.partType)) {
+                            // Contacts/Coils connect at their center X for the rung.
+                            blockConnectionPointX = partStartRenderX + (part.calculatedWidth / 2); 
+                        } else {
+                            // Instruction blocks connect at the left edge of their internal rectangle.
+                            blockConnectionPointX = partStartRenderX + part.maxLeftLabelsWidth;
+                        }
+
+                        // Draw wire segment before the part
+                        const wirePre = document.createElementNS(SVG_NS, "line");
+                        wirePre.setAttribute("x1", currentXPositionForParts);
+                        wirePre.setAttribute("y1", RUNG_Y);
+                        wirePre.setAttribute("x2", blockConnectionPointX);
+                        wirePre.setAttribute("y2", RUNG_Y);
+                        wirePre.classList.add("ladder-wire");
+                        svg.appendChild(wirePre);
+
+                        // Render the part
+                        svg.appendChild(renderPartGraphic(part, partStartRenderX, RUNG_Y));
+                        
+                        // Update currentXPositionForParts to be the rightmost visual edge of the part, for next wire segment
+                        currentXPositionForParts = partStartRenderX + part.calculatedWidth; 
+                    });
+
+                    // Draw wire after the last part to the right rail
+                    const lastPart = partsToRender[partsToRender.length - 1];
+                    let lastBlockConnectionPointX;
+                    if (/Contact|Coil/.test(lastPart.partType)) {
+                        // Contacts/Coils connect at their center X for the rung.
+                        lastBlockConnectionPointX = (currentXPositionForParts - lastPart.calculatedWidth) + (lastPart.calculatedWidth / 2);
+                    } else {
+                        // Instruction blocks connect at the right edge of their internal rectangle.
+                        lastBlockConnectionPointX = (currentXPositionForParts - lastPart.calculatedWidth) + lastPart.maxLeftLabelsWidth + lastPart.blockInternalRectWidth;
+                    }
+
+                    const wireEnd = document.createElementNS(SVG_NS, "line");
+                    wireEnd.setAttribute("x1", lastBlockConnectionPointX);
+                    wireEnd.setAttribute("y1", RUNG_Y);
+                    wireEnd.setAttribute("x2", actualRailRightX);
+                    wireEnd.setAttribute("y2", RUNG_Y);
+                    wireEnd.classList.add("ladder-wire"); svg.appendChild(wireEnd);
+                }
+                networksContainer.appendChild(svg);
+            });
+        }
+
+        // Renders either a contact, coil, or instruction block
+        function renderPartGraphic(part, x, y) {
+            const group = document.createElementNS(SVG_NS, "g");
+            group.setAttribute("transform", `translate(${x}, ${y - part.calculatedHeight/2})`);
+
+            if (part.partType === 'Contact') {
+                renderContactContent(group, part);
+            } else if (part.partType === 'Coil') {
+                renderCoilContent(group, part);
+            } else {
+                renderInstructionBlockContent(group, part);
+            }
+            return group;
+        }
+
+        const PIN_LINE_HEIGHT = 12; // Estimated line height for pin/operand text
+        const IN_BLOCK_PAD_H = 10; // Horizontal padding inside instruction block for text
+        const IN_BLOCK_PAD_V = 10; // Vertical padding inside instruction block for text
+        const PIN_ELEMENT_GAP_H = 5; // Horizontal gap between pin name/terminal and operand/block edge
+        const PIN_TERMINAL_SIZE = 3; // Radius for circle terminal
+        const PIN_TERMINAL_WIRE_LENGTH = 10; // Length of wire connecting terminal to block
+        const MIN_CONTACT_COIL_VISUAL_WIDTH = 30; // Fixed visual width of the contact/coil lines/circle
+        const MIN_BLOCK_RECT_WIDTH = 50; // Minimum width for the instruction block rectangle itself
+        const MAX_OPERAND_WRAP_WIDTH = 100; // Max width before an operand wraps
+
+        // Calculates dimensions for Contact and Coil
+        function calculateContactCoilDimensions(part) {
+            const opPin = part.pins.find(pn => pn.name === 'operand');
+            let operandTextWidth = 0;
+            let operandTextHeight = 0;
+            if (opPin) {
+                const wrapped = wrapText(opPin.operand, MAX_OPERAND_WRAP_WIDTH, `${part.partType.toLowerCase()}-operand`, PIN_LINE_HEIGHT);
+                opPin.wrappedOperand = wrapped.lines;
+                opPin.operandWidth = wrapped.width;
+                opPin.operandHeight = Math.max(PIN_LINE_HEIGHT, wrapped.height);
+                operandTextWidth = opPin.operandWidth;
+                operandTextHeight = opPin.operandHeight;
+            }
+            
+            // Part's total width must be at least the visual width of the symbol, or wider for long operand text
+            part.calculatedWidth = Math.max(MIN_CONTACT_COIL_VISUAL_WIDTH, operandTextWidth + IN_BLOCK_PAD_H * 2);
+            
+            // Calculated height includes the fixed symbol height (20px) + space for operand text above it + padding
+            part.calculatedHeight = 20; 
+            if (opPin) {
+                part.calculatedHeight += (operandTextHeight + IN_BLOCK_PAD_V); // Add operand height + padding above symbol
+            } else {
+                part.calculatedHeight += IN_BLOCK_PAD_V; // Just some padding if no operand
+            }
+        }
+
+        function renderContactContent(group, part) {
+            const symbolVisualWidth = MIN_CONTACT_COIL_VISUAL_WIDTH; 
+            const totalPartWidth = part.calculatedWidth;
+            const horizontalOffset = (totalPartWidth - symbolVisualWidth) / 2; // Offset to center fixed-width symbol visually
+
+            const op = part.pins.find(pn => pn.name === 'operand');
+            let operandTextVerticalSpace = 0; // Space taken by operand text (height + padding)
+
+            if (op) {
+                operandTextVerticalSpace = op.operandHeight + IN_BLOCK_PAD_V;
+                const t = document.createElementNS(SVG_NS, "text");
+                t.setAttribute("x", totalPartWidth / 2); 
+                t.setAttribute("y", op.operandHeight / 2); 
+                t.setAttribute("dominant-baseline", "middle");
+                t.setAttribute("text-anchor", "middle");
+                t.classList.add("contact-operand");
+                op.wrappedOperand.forEach((line, index) => {
+                    const tspan = document.createElementNS(SVG_NS, "tspan");
+                    tspan.textContent = line;
+                    tspan.setAttribute("x", totalPartWidth / 2); 
+                    tspan.setAttribute("dy", index === 0 ? 0 : PIN_LINE_HEIGHT);
+                    t.appendChild(tspan);
+                });
+                group.appendChild(t);
+            } else {
+                operandTextVerticalSpace = IN_BLOCK_PAD_V;
+            }
+
+
+            // Contact symbol: two vertical lines centered within symbolVisualWidth
+            const rungLineY = operandTextVerticalSpace + (part.calculatedHeight - operandTextVerticalSpace) / 2; // Vertical center of the symbol's area
+
+            const verticalBarX = horizontalOffset + symbolVisualWidth / 2; // Center of the two bars
+            const barSpacing = 8; // Spacing between the two vertical bars
+
+            const bar1 = document.createElementNS(SVG_NS, "line");
+            bar1.setAttribute("x1", verticalBarX - barSpacing/2); bar1.setAttribute("y1", rungLineY - 10);
+            bar1.setAttribute("x2", verticalBarX - barSpacing/2); bar1.setAttribute("y2", rungLineY + 10);
+            bar1.classList.add("contact-symbol"); group.appendChild(bar1);
+
+            const bar2 = document.createElementNS(SVG_NS, "line");
+            bar2.setAttribute("x1", verticalBarX + barSpacing/2); bar2.setAttribute("y1", rungLineY - 10);
+            bar2.setAttribute("x2", verticalBarX + barSpacing/2); bar2.setAttribute("y2", rungLineY + 10);
+            bar2.classList.add("contact-symbol"); group.appendChild(bar2);
+        }
+
+        function renderCoilContent(group, part) {
+            const symbolVisualWidth = MIN_CONTACT_COIL_VISUAL_WIDTH; 
+            const totalPartWidth = part.calculatedWidth; 
+            const horizontalOffset = (totalPartWidth - symbolVisualWidth) / 2; 
+
+            const op = part.pins.find(pn => pn.name === 'operand');
+            let operandTextVerticalSpace = 0; 
+
+            if (op) {
+                operandTextVerticalSpace = op.operandHeight + IN_BLOCK_PAD_V;
+                const t = document.createElementNS(SVG_NS, "text");
+                t.setAttribute("x", totalPartWidth / 2); 
+                t.setAttribute("y", op.operandHeight / 2); 
+                t.setAttribute("dominant-baseline", "middle");
+                t.setAttribute("text-anchor", "middle");
+                t.classList.add("coil-operand");
+                op.wrappedOperand.forEach((line, index) => {
+                    const tspan = document.createElementNS(SVG_NS, "tspan");
+                    tspan.textContent = line;
+                    tspan.setAttribute("x", totalPartWidth / 2); 
+                    tspan.setAttribute("dy", index === 0 ? 0 : PIN_LINE_HEIGHT);
+                    t.appendChild(tspan);
+                });
+                group.appendChild(t);
+            } else {
+                operandTextVerticalSpace = IN_BLOCK_PAD_V;
+            }
+
+            // Coil symbol (circle)
+            const symbolCenterY = operandTextVerticalSpace + (part.calculatedHeight - operandTextVerticalSpace) / 2; // Vertical center of the symbol's area
+
+            const circle = document.createElementNS(SVG_NS, "circle");
+            circle.setAttribute("cx", horizontalOffset + symbolVisualWidth / 2); 
+            circle.setAttribute("cy", symbolCenterY); 
+            circle.setAttribute("r", 10); // Radius
+            circle.classList.add("coil-symbol"); group.appendChild(circle);
+        }
+
+        // Function to calculate dimensions of an instruction block including wrapped text
+        function calculateInstructionBlockDimensions(part) {
+            const INSTRUCTION_TYPE_HEIGHT = estimateTextDimensions(part.partType, "part-type").height || 15; // Dynamic height for instruction type
+
+            let maxLeftLabelsWidth = 0;
+            let maxRightLabelsWidth = 0;
+            let totalPinsVerticalSpace = 0; // Sum of operand heights
+
+            const typeTextWidth = estimateTextDimensions(part.partType, "part-type").width;
+
+            part.pins.forEach(pin => {
+                const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name); // Expanded heuristic
+                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
+
+                const wrapped = wrapText(pin.operand, MAX_OPERAND_WRAP_WIDTH, "pin-operand", PIN_LINE_HEIGHT);
+                pin.wrappedOperand = wrapped.lines;
+                pin.operandWidth = wrapped.width;
+                pin.operandHeight = Math.max(PIN_LINE_HEIGHT, wrapped.height); // At least one line height
+
+                totalPinsVerticalSpace += pin.operandHeight; // Accumulate vertical space
+
+                // Calculate total width needed for: [PIN NAME TEXT] --- Block Edge --- WIRE --- (TERMINAL) --- GAP --- [OPERAND TEXT]
+                // This is the width from the outermost edge of the operand to the inner edge of the block where the pin name starts/ends.
+                // Re-evaluate: Max width of the labels *including* pin name and operand is for *outside* the block
+                // For internal pin names, we reserve IN_BLOCK_PAD_H width inside the block.
+                
+                const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
+
+                if (isOutput) {
+                    maxRightLabelsWidth = Math.max(maxRightLabelsWidth, currentLabelSetWidth);
+                } else {
+                    maxLeftLabelsWidth = Math.max(maxLeftLabelsWidth, currentLabelSetWidth);
+                }
+            });
+
+            part.blockInternalRectWidth = Math.max(MIN_BLOCK_RECT_WIDTH, typeTextWidth + IN_BLOCK_PAD_H * 2);
+            // Total calculated width = Max left space + Internal block width + Max right space
+            part.calculatedWidth = maxLeftLabelsWidth + part.blockInternalRectWidth + maxRightLabelsWidth;
+
+            // Calculated height: Top padding + Type height + padding + total pins height + bottom padding
+            part.calculatedHeight = Math.max(
+                40, // Minimum height for the block
+                IN_BLOCK_PAD_V + INSTRUCTION_TYPE_HEIGHT + IN_BLOCK_PAD_V + totalPinsVerticalSpace + IN_BLOCK_PAD_V
+            ); 
+
+            part.maxLeftLabelsWidth = maxLeftLabelsWidth;
+            part.maxRightLabelsWidth = maxRightLabelsWidth;
+            part.instructionTypeHeight = INSTRUCTION_TYPE_HEIGHT; 
+        }
+
+
+        // Renders the internal content of an instruction block (rectangle, type, pins, operands)
+        function renderInstructionBlockContent(group, part) {
+            const rectX = part.maxLeftLabelsWidth; // Offset rectangle to make space for left-side labels
+            const headerHeight = IN_BLOCK_PAD_V + part.instructionTypeHeight + IN_BLOCK_PAD_V; // Total height of the header area
+
+            // Header rectangle (top part of the block)
+            const headerRect = document.createElementNS(SVG_NS, "rect");
+            headerRect.setAttribute("x", rectX);
+            headerRect.setAttribute("y", 0);
+            headerRect.setAttribute("width", part.blockInternalRectWidth);
+            headerRect.setAttribute("height", headerHeight);
+            headerRect.setAttribute("rx", 3); headerRect.setAttribute("ry", 3); // Apply rounding
+            headerRect.classList.add("instruction-block-header");
+            group.appendChild(headerRect);
+
+            // Main body rectangle (rest of the block)
+            const bodyRect = document.createElementNS(SVG_NS, "rect");
+            bodyRect.setAttribute("x", rectX);
+            bodyRect.setAttribute("y", headerHeight); // Starts below the header
+            bodyRect.setAttribute("width", part.blockInternalRectWidth);
+            bodyRect.setAttribute("height", part.calculatedHeight - headerHeight);
+            // Reapply rounding to bottom corners only by drawing a full rectangle and then header on top
+            bodyRect.setAttribute("rx", 3); bodyRect.setAttribute("ry", 3); 
+            bodyRect.classList.add("instruction-block-body");
+            group.appendChild(bodyRect);
+
+            // Part Type text (centered within the header rectangle)
+            const typeText = document.createElementNS(SVG_NS, "text");
+            typeText.setAttribute("x", rectX + part.blockInternalRectWidth / 2); // Center horizontally
+            typeText.setAttribute("y", headerHeight / 2); // Center vertically within header
+            typeText.setAttribute("dominant-baseline", "middle");
+            typeText.classList.add("part-type");
+            typeText.textContent = part.partType;
+            group.appendChild(typeText);
+
+            // Starting Y for pins, below the header section
+            let currentYInput = headerHeight + IN_BLOCK_PAD_V;
+            let currentYOutput = headerHeight + IN_BLOCK_PAD_V;
+
+            part.pins.forEach(pin => {
+                const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
+                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
+
+                const pinY = (isOutput ? currentYOutput : currentYInput);
+                const currentOperandHeight = pin.operandHeight;
+                const pinCenterY = pinY + (currentOperandHeight / 2); // Vertical center for this pin row
+
+                // Pin Name (inside the block rectangle)
+                const pinNameText = document.createElementNS(SVG_NS, "text");
+                pinNameText.setAttribute("y", pinCenterY);
+                pinNameText.classList.add("pin-name");
+                pinNameText.textContent = pin.name;
+                if (isOutput) {
+                    pinNameText.setAttribute("x", rectX + part.blockInternalRectWidth - IN_BLOCK_PAD_H);
+                    pinNameText.setAttribute("text-anchor", "end"); // Right-aligned inside block
+                    currentYOutput += currentOperandHeight;
+                } else {
+                    pinNameText.setAttribute("x", rectX + IN_BLOCK_PAD_H);
+                    pinNameText.setAttribute("text-anchor", "start"); // Left-aligned inside block
+                    currentYInput += currentOperandHeight;
+                }
+                group.appendChild(pinNameText);
+
+                let terminalCenterX;
+                let wireStartX;
+                let wireEndX;
+                let operandRenderX; // This will be the x for operand text start/end
+
+                // Position elements relative to each other for Input/Output
+                if (isOutput) {
+                    // Output side: Block edge --- WIRE --- (Terminal) --- [Operand Text]
+                    wireStartX = rectX + part.blockInternalRectWidth; // Block right edge
+                    terminalCenterX = wireStartX + PIN_TERMINAL_WIRE_LENGTH; // Center of terminal
+                    operandRenderX = terminalCenterX + PIN_TERMINAL_SIZE + PIN_ELEMENT_GAP_H; // Start of operand text
+                    wireEndX = terminalCenterX; // Wire connects to terminal center
+                } else {
+                    // Input side: [Operand Text] --- (Terminal) --- WIRE --- Block edge
+                    wireEndX = rectX; // Block left edge
+                    terminalCenterX = wireEndX - PIN_TERMINAL_WIRE_LENGTH; // Center of terminal
+                    operandRenderX = terminalCenterX - PIN_TERMINAL_SIZE - PIN_ELEMENT_GAP_H; // End of operand text
+                    wireStartX = terminalCenterX; // Wire connects to terminal center
+                }
+
+                // Pin Terminal (small circle)
+                const terminalCircle = document.createElementNS(SVG_NS, "circle");
+                terminalCircle.setAttribute("r", PIN_TERMINAL_SIZE); // Radius of the circle
+                terminalCircle.setAttribute("cy", pinCenterY);
+                terminalCircle.setAttribute("cx", terminalCenterX);
+                terminalCircle.classList.add("pin-terminal");
+                group.appendChild(terminalCircle);
+
+                // Wire segment connecting Terminal to Block
+                const terminalWire = document.createElementNS(SVG_NS, "line");
+                terminalWire.setAttribute("y1", pinCenterY);
+                terminalWire.setAttribute("y2", pinCenterY);
+                terminalWire.setAttribute("x1", wireStartX);
+                terminalWire.setAttribute("x2", wireEndX);
+                terminalWire.classList.add("ladder-wire");
+                group.appendChild(terminalWire);
+
+                // Pin Operand (outside the block rectangle)
+                const operandTextGroup = document.createElementNS(SVG_NS, "text");
+                operandTextGroup.setAttribute("y", pinY); // Top of the operand text block
+                operandTextGroup.classList.add("pin-operand");
+
+                pin.wrappedOperand.forEach((line, index) => {
+                    const tspan = document.createElementNS(SVG_NS, "tspan");
+                    tspan.textContent = line;
+                    tspan.setAttribute("dy", index === 0 ? 0 : PIN_LINE_HEIGHT);
+                    tspan.setAttribute("x", operandRenderX); // Apply calculated X
+                    tspan.setAttribute("text-anchor", isOutput ? "start" : "end"); // Apply calculated anchor
+                    operandTextGroup.appendChild(tspan);
+                });
+                group.appendChild(operandTextGroup);
+            });
+        }
+
+
+        // --- Main Execution ---
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('load-sample-btn').addEventListener('click', () => processAndRender(sampleXmlString));
+
+            document.getElementById('file-input').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    // Reset display if no file is selected
+                    document.getElementById("block-summary-text").textContent = "Block Details:";
+                    document.querySelector("#block-interface-content table tbody").innerHTML = "";
+                    document.getElementById("networks-container").innerHTML = `<h2 class="section-title">Networks</h2><div id="runtime-error-display" class="error-message" style="display:none;"></div><p id="initial-instruction">Please load a TIA Portal XML file using the "Load Built-in Sample" or "Choose File" button above.</p>`; // Reset with initial instruction
+                    document.getElementById("file-name-display").textContent = "No file chosen"; // Reset file name display
+                    return;
+                }
+
+                // Hide initial instruction message when a file is chosen
+                document.getElementById("initial-instruction").style.display = "none";
+                document.getElementById("file-name-display").textContent = file.name; // Display chosen file name
+
+                const reader = new FileReader();
+                reader.onload = (e) => processAndRender(e.target.result);
+                reader.onerror = (e) => {
+                    displayErrorMessage("Error reading file: " + e.target.error.message);
+                    console.error("File reader error:", e.target.error);
+                };
+                reader.readAsText(file);
+            });
+
+            // Automatically load sample on first page load for quick feedback
+            processAndRender(sampleXmlString);
+        });
+
+    </script>
+</body>
+</html>
+--- END OF FILE index.html ---

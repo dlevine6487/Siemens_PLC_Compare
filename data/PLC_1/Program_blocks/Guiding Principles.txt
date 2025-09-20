@@ -1,0 +1,115 @@
+Prompt for Next AI Agent: Siemens PLC Code Viewer - Urgent Troubleshooting & Reconstruction
+CRITICAL CONTEXT & HANDOVER
+To the Next Agent:
+I am handing over a critical task. I have been attempting to develop a browser-based viewer for Siemens TIA Portal Ladder Logic XML files, but despite numerous iterations and extensive debugging efforts, I have failed to achieve consistent, correct rendering. The situation is unacceptable, and the user's frustration is entirely justified.
+You are being brought in to take over and succeed where I have failed.
+Your absolute first action is to carefully read and internalize the guiding_principles.md file that was just provided. That document contains the full project objective, a detailed root cause analysis of the persistent failures, and the precise methodology you are expected to follow.
+YOUR CORE MISSION:
+Bring the index.html file to a state where it successfully parses any valid TIA Portal PLC block XML file (specifically starting with BoilerAlarm.xml) and renders its ladder logic with high visual fidelity, including correct word-wrapping and precise element alignment, as per the guiding_principles.md document.
+CURRENT STATUS & KNOWN ISSUES (From Last Attempt):
+Based on the last interaction, the core diagnostic is:
+HTML File: index.html (this file).
+Problematic XML File (User's specific file): BoilerAlarm.xml.
+Console Output for BoilerAlarm.xml (similar to last attempts):
+code
+Code
+Script Loaded and running.
+DEBUG: Input XML Content (first 500 chars): ... (shows content of BoilerAlarm.xml)
+DEBUG: Cleaned XML Content (first 500 chars): ... (shows content of BoilerAlarm.xml after cleaning)
+DEBUG: xmlDoc.documentElement.nodeName: Document
+DEBUG: xmlDoc.documentElement.outerHTML (first 1000 chars): ... (shows the full Document structure)
+// ... no further parsing logs, and NO RED ERRORS appear until a much later, unrelated HTMLDOM exception, or sometimes no errors at all.
+Page Output: Absolutely nothing renders in the "Networks" section, beyond the static "Networks" title and instruction text. The interface table might be partially populated but the network diagrams are completely empty.
+Analysis: This means the DOMParser is now successfully parsing the XML into an XMLDocument object (Root element: Document). However, the JavaScript is then failing silently (or with very delayed/misleading errors) somewhere in the subsequent parsing or rendering logic before any SVG elements are visibly drawn.
+The problem has shifted from DOMParser failure to a deeper issue within the JavaScript logic that traverses the xmlDoc and attempts to extract and render the specific ladder logic components.
+YOUR IMMEDIATE, TOP-PRIORITY TASK (Per Guiding Principles - Option A/C Hybrid):
+You will combine the robustness of Option A: Step-by-Step Parser Reconstruction with Explicit Internal Assertions with the diagnostic clarity of Option C: Detailed Diagnostic Delivery.
+Re-verify index.html File Integrity: Ensure the current index.html is the one from the last complete code block you provided to me, with all fixes and logging enabled.
+Run the Built-in Sample First:
+Reload index.html in the browser, open the F12 console (hard refresh).
+Click "Load Built-in Sample".
+CRITICAL CHECK: Ensure the built-in sample now renders perfectly (interface and both networks with correctly aligned, wrapped tags, accurate rung connections, etc.) and that NO RED ERRORS appear in the console. If this fails, stop and debug the built-in sample first with extreme granularity.
+Debug BoilerAlarm.xml - Granular Parsing & Assertion:
+If the built-in sample renders correctly, then load BoilerAlarm.xml via "Choose File".
+Your focus will be on the parseXmlContent function and its helpers. The failure is now occurring after DOMParser but before elements are rendered.
+Implement console.assert(condition, "Diagnostic message") at every single data extraction point within parseXmlContent:
+After getting the block name: console.assert(plcBlock.name !== '', "PLC Block name is empty. Check AttributeList > Name structure.")
+After getting network title/comment: console.assert(network.title !== '', "Network title is empty. Check AttributeList > Title structure.")
+After finding FlgNet: console.assert(flgNet !== null, "FlgNet is null. Check NetworkSource content.")
+After finding Access, Part, Wire collections: console.assert(collection.length > 0, "No X elements found in FlgNet. Check FlgNet content.")
+After populating part.pins: console.assert(part.pins.length > 0, "Part has no pins. Check Wire and Access mapping logic.")
+For FlgNet content extraction (where getElementsByTagNameNS vs. querySelectorAll is adaptive): Add logs to confirm which method succeeded for FlgNet, and then log the outerHTML of flgNet itself before trying to extract Access, Part, Wire elements. This will show us the exact DOM structure from which children are expected.
+Any assertion failure or console error is your debugging priority. The displayErrorMessage function should be triggered by these assertions, giving you on-page guidance.
+Your Goal: Get BoilerAlarm.xml to parse its plcBlock object completely and correctly, filling all names, titles, parts, and pins, without any console.error or console.assert failures, before we even worry about the final visual alignment.
+Good luck. I am counting on you.
+
+
+
+
+
+
+Guiding Principles for Siemens PLC Code Viewer Agent
+To the Next Agent:
+I deeply apologize for the current state of the index.html code. Despite numerous iterations, we have been unable to achieve consistent, correct rendering, primarily due to persistent issues with XML parsing and precise SVG layout. Your predecessor (me) has failed to deliver a stable solution or clear diagnostic path.
+This document serves as a comprehensive handover, outlining the project objective, current status, root causes of failures, and a precise strategy for you to take over and succeed.
+1. Project High-Level Objective
+The primary objective is to develop a browser-based proof-of-concept for parsing and visually rendering Siemens TIA Portal Ladder Logic XML files (.xml exports of FBs, FCs, OBs). The rendered output must:
+Closely mimic the look, feel, and layout of the native TIA Portal Ladder Logic Editor.
+Display the Block Interface (Inputs, Outputs, InOuts, Statics, Temps).
+Render each Network/Rung with its title and comment.
+Accurately represent Contacts, Coils, and Instruction Blocks.
+Ensure tags (operands) are correctly word-wrapped if they exceed a configurable character limit, and that all graphical elements (symbols, wires, instruction blocks) dynamically adjust their size and position to accommodate these wrapped tags without overlap or truncation.
+Achieve pixel-level alignment for all connections (rungs to parts, terminals to tags).
+2. Current State of index.html (Baseline for Your Work)
+The index.html file provided with this handover represents the latest state of my attempts.
+What should be working (but needs re-verification):
+Basic HTML Structure: Toolbar, collapsible "Block Details" section, "Networks" container.
+File Loading: The "Choose File" button correctly loads .xml content into JavaScript.
+XML Cleaning (cleanXmlContent): This function aggressively removes BOMs and common malformed namespace URIs from TIA Portal XML.
+DOMParser Execution: When tested internally, DOMParser should now successfully parse a valid TIA Portal XML string (like the sampleXmlString) into an XMLDocument object, reporting Document as the root element.
+Error Reporting: The displayErrorMessage function should now visibly report DOMParser errors or other parsing failures directly on the page, including outerHTML snippets for diagnosis.
+What is known to be broken or highly unreliable (Your Primary Focus):
+Rendering Logic Failures: The core SVG rendering functions (renderNetworks, renderPartGraphic, renderInstructionBlockContent, renderContactContent, renderCoilContent) are either:
+Not producing any visible output beyond basic rails.
+Producing output with severe visual misalignments (incorrect rung connections, tags overlapping, symbols out of place).
+Crashing silently after XML parsing but before elements are appended to the SVG.
+MultilingualText Extraction Inconsistency: The getMultilingualTextContent function, despite multiple revisions, still appears to fail in extracting Block Names, Network Titles, and Comments from some TIA Portal XML structures, leading to empty labels (e.g., Parsed PLC Block Name: Type: FB).
+FlgNet Content Extraction Failure: While FlgNet itself might be found (via namespaced or non-namespaced queries), the extraction of its children (Access, Part, Wire) is highly unreliable, leading to empty networks even when the raw XML clearly contains logic. This is likely a continuation of namespace interpretation issues within DOMParser impacting child element lookup.
+3. Root Cause Analysis Summary (Why it's Broken)
+The fundamental problem is a brittle XML parsing pipeline combined with imprecise SVG coordinate calculations and a lack of systematic internal validation during development.
+DOMParser Strictness: TIA Portal XML's subtle variations (e.g., Name tags with direct text content vs. nested MultilingualText, slight deviations in xmlns URIs) frequently cause DOMParser to return a parsererror or treat the XML as html.
+Namespace Traversal: Successfully identifying FlgNet elements (which declare their own xmlns) is often not enough. Subsequent queries for its children (Access, Part, Wire) must adapt to how DOMParser actually interpreted the FlgNet's namespace context (namespaced vs. null). My adaptive logic has been insufficient here.
+Coordinate System Complexities: The desired TIA Portal layout (dynamic sizing, specific internal/external alignment, word wrap accommodation) is a highly interdependent coordinate system. Small errors in calculatedWidth, calculatedHeight, rectX, terminalCenterX, or operandRenderX compound into visual chaos.
+Inadequate Internal Verification: My previous console logs were reactive. We need proactive, programmatic checks at every step.
+4. Guiding Principles for You (The Next Agent)
+To prevent past mistakes and ensure success, please adhere to these principles:
+Prioritize Parser Reliability Above All Else: A broken parse means no rendering. Ensure parseXmlContent is 100% robust for all TIA Portal XML variations.
+Embrace Granular Diagnostic Output:
+Use console.log at every single critical step (after cleaning, after DOMParser, after finding each major element like blockElement, attributeList, networkSource, flgNet, and especially before and after populating network.parts).
+Crucially: When debugging FlgNet content, log flgNet.outerHTML to see exactly what the browser thinks that element contains before trying to extract children.
+Implement Internal Assertions: Use console.assert(condition, "Diagnostic message") for critical checks (e.g., assert(plcBlock.name !== '', "Block name is empty after parse"), assert(network.parts.length > 0, "Network has no parts after parse")). This acts as an internal "unit test" during runtime.
+Adopt Defensive Rendering: Assume parsed data might be incomplete or null. Use if (data) checks around rendering logic.
+Reconstruct Rendering Incrementally: Do not attempt to fix all rendering issues at once.
+First, just get basic network titles/comments and power rails.
+Then, introduce contacts/coils.
+Then, instruction blocks (just the main rectangle and type).
+Finally, tackle the complex pin/terminal/wire/operand alignment, building it piece by piece with constant visual checks.
+Verify Against Both sampleXmlString and BoilerAlarm.xml: The sampleXmlString is a controlled test. Your primary challenge is BoilerAlarm.xml. Use the error messages from your file to drive specific fixes.
+Reproducible Environment: Stress the importance of hard refresh, console checks, and a clean file each time.
+5. Next Troubleshooting Steps (Actionable Plan for You)
+You will operate from the provided index.html file.
+Your First Task: Validate and Fix parseXmlContent for BoilerAlarm.xml
+Reload index.html in your browser and open F12 console (hard refresh).
+Click "Choose File" and select the BoilerAlarm.xml file.
+Analyze the On-Page Error Message (if any) and Console Logs:
+Focus on DEBUG: Cleaned XML Content (full): Inspect this string carefully. Look for any newlines, spaces, or unexpected characters around <?xml or within xmlns attributes that cleanXmlContent might have missed. If you find one, update cleanXmlContent with a new replace rule.
+Focus on the DOMParser error (if parsererror root) or XML Root Element Error: This is the highest-level parsing failure. The on-page message will tell you exactly what DOMParser found.
+Focus on Parsed PLC Block Name:: If this is empty, the getMultilingualTextContent function is failing for the block's Name tag. This means the structure of <Name><MultilingualText><Text>...</Text></Name> is not as expected in BoilerAlarm.xml, or getMultilingualTextContent isn't robust enough. You will need to manually inspect the blockElement.outerHTML (which is logged) to see how <Name> is structured and adapt getMultilingualTextContent accordingly.
+Focus on Network X: FlgNet element not found... warnings/errors: If these appear, this is where NetworkSource isn't yielding a valid FlgNet element. You will need to inspect networkSource.outerHTML (which is logged) to see the exact structure of the network source within BoilerAlarm.xml and debug why getFlgNetElements (namespaced or non-namespaced) is failing. It might be a new unexpected namespace or nesting.
+Iterate on Parsing Fixes: Based on the detailed error messages, apply a targeted fix only for that specific parsing step. Re-run and re-verify until parseXmlContent returns a valid plcBlock object for BoilerAlarm.xml without any console errors.
+Once BoilerAlarm.xml parses successfully, then (and only then):
+Re-evaluate Rendering Accuracy (Visuals): With a stable plcBlock for your file, you can then proceed to fine-tune the renderContent and renderPartGraphic functions to match the TIA Portal visuals, addressing:
+Rung connections (wirePre, wireEnd x-coordinates).
+Tag/terminal/wire alignment around instruction blocks (terminalCenterX, operandRenderX calculations).
+Ensuring dynamic heights/widths correctly prevent overlap for wrapped text.
+This detailed, diagnostic-driven approach is our best chance at resolving the deep-seated issues. I trust you to implement this rigorously.
