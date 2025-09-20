@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
 
         if file_path:
             # Get the scene from the NetworkView
-            scene = self.content_area.scene()
+            scene = self.content_area.scene
 
             # Use the scene's bounding rect to determine the image size
             rect = scene.sceneRect()
