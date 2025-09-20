@@ -33,7 +33,6 @@ class InteractivePartItem(QGraphicsObject):
         operand = ""
         if self.part.part_type in ['Contact', 'Coil']:
             for pin in self.part.pins:
-                # The primary tag for a simple contact/coil is often just called 'operand' by our parser
                 if pin.name == 'operand':
                     operand = pin.operand
                     break
@@ -62,12 +61,10 @@ class InteractivePartItem(QGraphicsObject):
                 is_out = pin.name in ['OUT', 'RET_VAL', 'ENO'] # Simple check for output pins
                 y = y_out if is_out else y_in
 
-                # Draw Pin Name
                 painter.setFont(self.pin_font)
                 align_pin = Qt.AlignRight if is_out else Qt.AlignLeft
                 painter.drawText(QRectF(5, y, self.item_width - 10, 15), align_pin, pin.name)
 
-                # Draw Pin Operand (the connected tag)
                 painter.setFont(self.operand_font)
                 align_operand = Qt.AlignLeft if is_out else Qt.AlignRight
                 rect_operand = QRectF(self.item_width + 5, y, 95, 15) if is_out else QRectF(-100, y, 95, 15)

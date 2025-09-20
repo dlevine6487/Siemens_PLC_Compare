@@ -53,22 +53,17 @@ class MainWindow(QMainWindow):
         self.main_splitter.setSizes([250, 600, 350])
 
     def export_view_to_image(self):
-        # Check if the current content widget is a NetworkView
         if not isinstance(self.content_area, NetworkView):
             QMessageBox.information(self, "Export Not Available", "There is no graphical view to export.")
             return
 
-        # Open a file dialog to get the save path
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Image", "export.png", "PNG Images (*.png);;All Files (*)")
 
         if file_path:
-            # Get the scene from the NetworkView
             scene = self.content_area.scene()
-
-            # Use the scene's bounding rect to determine the image size
             rect = scene.sceneRect()
             image = QImage(rect.size().toSize(), QImage.Format_ARGB32)
-            image.fill(Qt.white) # Use white background for better visibility
+            image.fill(Qt.white)
 
             painter = QPainter(image)
             scene.render(painter)

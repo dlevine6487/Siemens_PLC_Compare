@@ -17,9 +17,7 @@
 4. [System Architecture and Design Principles](#4-system-architecture-and-design-principles)
 5. [Non-Functional Requirements](#5-non-functional-requirements)
 6. [Future Extensibility](#6-future-extensibility)
-7. [Risks and Mitigations](#7-risks-and-mitigations)
-8. [Assumptions and Dependencies](#8-assumptions-and-dependencies)
-9. [Definitions and Acronyms](#9-definitions-and-acronyms)
+7. [Definitions and Acronyms](#7-definitions-and-acronyms)
 
 ---
 
@@ -54,9 +52,6 @@ The Siemens PLC Code Viewer will be a read-only application. Its core function i
     *   Interface definitions (Input, Output, In-Out, Static, Temp parameters).
     *   The main code body, including all networks.
     *   Network titles, comments, and component-level annotations.
-*   **FR-2.1.5:** The parser **shall** implement an XML "healing" or pre-processing step to correct known structural issues in the source XML, such as malformed namespace URIs or invalid characters. This mechanism must be extensible to handle new issues as they are discovered.
-*   **FR-2.1.6:** For text-based languages (SCL, STL), the parser **shall** extract the raw text content and identify key structural elements to support accurate syntax highlighting.
-*   **FR-2.1.7:** For GRAPH (SFC), the parser **shall** identify and extract the distinct steps, transitions, and associated actions, preserving their sequential and parallel relationships to allow for correct graphical rendering.
 
 #### **2.2. Data Transformation and Intermediate Representation**
 *   **FR-2.2.1:** The system **shall** transform the parsed, proprietary Siemens XML data into a standardized internal data model.
@@ -128,29 +123,7 @@ The system architecture **shall** be designed to accommodate future enhancements
 *   **EXT-6.2:** A plug-in system for third-party developers to add custom analysis, reporting, or documentation tools.
 *   **EXT-6.3:** The potential for adding basic code editing and XML export features in a future major version update.
 
-### **7. Risks and Mitigations**
-This section outlines the key risks identified for the project and the strategies to mitigate them.
-
-*   **RISK-7.1: Proprietary and Undocumented XML Format**
-    *   **Description:** The Siemens TIA Portal XML export format is proprietary, not publicly documented, and contains structures that are not compliant with the PLCopen standard. This poses a significant risk to the accuracy and completeness of the parsing engine.
-    *   **Mitigation:** The parsing module will be designed with a flexible and extensible architecture. An extensive test suite, containing a wide variety of XML samples exported from different TIA Portal versions and with different project configurations, will be developed and maintained. This will allow the team to identify and adapt to the nuances of the format.
-
-*   **RISK-7.2: XML Schema Varies Between TIA Portal Versions**
-    *   **Description:** The XML schema and its specific elements are known to change between different versions of the TIA Portal. An application built for one version may fail to parse files from another.
-    *   **Mitigation:** The application will initially target a specific, well-defined range of TIA Portal versions (e.g., v15, v16, v17). The supported versions will be clearly documented. The application will implement a mechanism to detect the TIA Portal version from the XML file if possible, and will provide a clear, informative message to the user if an unsupported version is detected.
-
----
-
-### **8. Assumptions and Dependencies**
-This section lists the assumptions and dependencies that affect the requirements in this SRS.
-
-*   **ASMP-8.1: Availability of XML Exports:** It is assumed that users will have access to a licensed copy of Siemens TIA Portal and will be able to generate the necessary XML exports for the PLC blocks they wish to view. The application itself will not interface directly with the TIA Portal software.
-*   **ASMP-8.2: Focus on Read-Only Functionality:** This SRS covers the requirements for a read-only code viewer. All development effort for the initial versions will be focused on parsing and rendering existing code. Editing, saving, or creating PLC code is explicitly out of scope.
-*   **DEP-8.3: Standard Windows Environment:** The application depends on a standard Windows 10 or later operating environment. No special hardware or system libraries outside of what is provided by the OS are expected to be required.
-
----
-
-### **9. Definitions and Acronyms**
+### **7. Definitions and Acronyms**
 
 | Term | Definition |
 |---|---|

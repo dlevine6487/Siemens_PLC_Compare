@@ -57,7 +57,7 @@ def parse_lad_fbd_file(file_path):
 
             flg_net = compile_unit.find(".//NetworkSource/*")
             if flg_net is not None:
-                # --- Final Corrected Robust Operand Parsing Logic ---
+                # --- Robust Operand Parsing Logic ---
                 access_map = {
                     acc_el.get('UId'): ".".join(c.get("Name") for c in acc_el.xpath("default:Symbol/default:Component", namespaces=ns_flgnet))
                     for acc_el in flg_net.xpath("./default:Parts/default:Access", namespaces=ns_flgnet)
@@ -150,6 +150,21 @@ if __name__ == '__main__':
                 print("\n--- PARSE SUCCESS ---")
                 print(f"Block Name: {parsed_block.name}")
 
+                # --- Test Interface Parsing ---
+                if parsed_block.interface:
+                    print("\n--- Interface Members ---")
+                    def print_members(section_name, members):
+                        if members:
+                            print(f"{section_name}:")
+                            for member in members:
+                                print(f"  - {member.name} ({member.data_type})")
+
+                    print_members("Input", parsed_block.interface.input_members)
+                    print_members("Output", parsed_block.interface.output_members)
+                    print_members("InOut", parsed_block.interface.in_out_members)
+                    print_members("Static", parsed_block.interface.static_members)
+                    print_members("Temp", parsed_block.interface.temp_members)
+
                 # --- Test Operand Parsing ---
                 print("\n--- Network and Operand Details ---")
                 for i, network in enumerate(parsed_block.networks):
@@ -161,7 +176,6 @@ if __name__ == '__main__':
                             print("    - No pins found.")
                         for pin in part.pins:
                             print(f"    - Pin: {pin.name}, Operand: '{pin.operand}'")
-                # --- End Test ---
             else:
                 print("\n--- PARSE FAILED: The function returned None. ---")
         except Exception as e:
