@@ -256,11 +256,17 @@ function createCoil(svg, cx, cy, operand) {
     svg.appendChild(group);
 }
 
-function createBlock(svg, x, y, width, height, title, pins) {
+function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const group = document.createElementNS(SVG_NS, "g");
     const headerHeight = 22;
     const pin_h_padding = 25;
-    const pin_v_spacing = 25;
+    const pin_v_spacing = 22; // Reduced vertical spacing for a more compact look
+
+    // Instance Name
+    if (instanceName) {
+        const instanceText = createText(x + width / 2, y - 10, instanceName, 'middle', 'instance-text');
+        group.appendChild(instanceText);
+    }
 
     const body = document.createElementNS(SVG_NS, "rect");
     body.setAttribute("x", x); body.setAttribute("y", y);
@@ -276,12 +282,11 @@ function createBlock(svg, x, y, width, height, title, pins) {
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
     const enY = y + headerHeight;
-    createWire(svg, x - pin_h_padding, enY, x, enY);
-    createWire(svg, x + width, enY, x + width + pin_h_padding, enY);
+
     let leftPinY = enY + pin_v_spacing;
     pins.forEach(pin => {
         if (pin.side !== 'left') return;
-        const pinName = createText(x + 5, leftPinY, pin.name, 'start', 'pin-name', { fill: "var(--tia-gray)" });
+        const pinName = createText(x + 8, leftPinY, pin.name, 'start', 'pin-name', { fill: "var(--tia-gray)" });
         group.appendChild(pinName);
         const operandText = createText(x - pin_h_padding, leftPinY, pin.operand, 'end', 'operand-text');
         group.appendChild(operandText);
@@ -291,7 +296,7 @@ function createBlock(svg, x, y, width, height, title, pins) {
     let rightPinY = enY + pin_v_spacing;
     pins.forEach(pin => {
         if (pin.side !== 'right') return;
-        const pinName = createText(x + width - 5, rightPinY, pin.name, 'end', 'pin-name', { fill: "var(--tia-gray)" });
+        const pinName = createText(x + width - 8, rightPinY, pin.name, 'end', 'pin-name', { fill: "var(--tia-gray)" });
         group.appendChild(pinName);
         const operandText = createText(x + width + pin_h_padding, rightPinY, pin.operand, 'start', 'operand-text');
         group.appendChild(operandText);
@@ -407,13 +412,15 @@ function renderNetwork(svg, networkXml, interfaceTags) {
         } else if (partName === 'RD_SYS_T' || partName === 'Program_Alarm') {
             const blockPins = [];
             const blockWires = wires.filter(w => w.querySelector(`NameCon[UId="${partUid}"]`));
+            const instanceEl = part.querySelector("Instance Component");
+            const instanceName = instanceEl ? `"${instanceEl.getAttribute("Name")}"` : null;
 
             const INPUT_PINS = ['en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
 
             blockWires.forEach(w => {
                 const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
                 const pinName = nameCon.getAttribute("Name");
-                if (pinName === 'en' || pinName === 'eno') return; // Skip EN/ENO, handled by main rung
+                if (pinName === 'en' || pinName === 'eno') return;
                 const operand = getOperand(w, accesses, interfaceTags);
                 const side = INPUT_PINS.includes(pinName) ? 'left' : 'right';
                 blockPins.push({ name: pinName, operand: operand, side: side });
@@ -423,14 +430,14 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             const blockWidth = 150;
             const leftPins = blockPins.filter(p => p.side === 'left').length;
             const rightPins = blockPins.filter(p => p.side === 'right').length;
-            const blockHeight = 40 + (Math.max(leftPins, rightPins) * 25);
+            const blockHeight = 30 + (Math.max(leftPins, rightPins) * 22);
             const blockY = RUNG_Y - (blockHeight / 2);
             const enPinY = blockY + 22;
 
             createWire(svg, currentX, RUNG_Y, blockX, RUNG_Y);
             createWire(svg, blockX, RUNG_Y, blockX, enPinY);
 
-            createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, blockPins);
+            createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, blockPins);
 
             const enoPinX = blockX + blockWidth;
             createWire(svg, enoPinX, enPinY, enoPinX, RUNG_Y);
