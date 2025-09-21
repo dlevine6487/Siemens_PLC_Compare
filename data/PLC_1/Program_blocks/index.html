@@ -306,8 +306,9 @@ function createBlock(svg, x, y, width, height, title, pins) {
 function processAndRender(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+    const interfaceTags = new Set();
 
-    // Render Interface
+    // Render Interface and collect tags
     const interfaceRoot = xmlDoc.querySelector("Interface");
     const tbody = document.querySelector("#interface-table tbody");
     tbody.innerHTML = '';
@@ -321,8 +322,10 @@ function processAndRender(xmlString) {
             headerCell.className = 'section-header';
             headerCell.textContent = sectionName;
             members.forEach(member => {
+                const memberName = member.getAttribute("Name");
+                interfaceTags.add(memberName);
                 const row = tbody.insertRow();
-                row.insertCell().textContent = member.getAttribute("Name");
+                row.insertCell().textContent = memberName;
                 row.insertCell().innerHTML = `<span class="datatype">${member.getAttribute("Datatype")}</span>`;
                 const commentEl = member.querySelector("Comment MultiLanguageText");
                 row.insertCell().innerHTML = `<span class="comment">${commentEl ? '// ' + commentEl.textContent : ''}</span>`;
@@ -345,16 +348,16 @@ function processAndRender(xmlString) {
 
         const svg = document.createElementNS(SVG_NS, "svg");
         svg.setAttribute('width', '800');
-        svg.setAttribute('height', '200'); // Adjust height dynamically later if needed
+        svg.setAttribute('height', '250'); // Adjust height dynamically later if needed
         svg.classList.add('svg-canvas');
         networkDiv.appendChild(svg);
         networksContainer.appendChild(networkDiv);
 
-        renderNetwork(svg, networkXml);
+        renderNetwork(svg, networkXml, interfaceTags);
     });
 }
 
-function renderNetwork(svg, networkXml) {
+function renderNetwork(svg, networkXml, interfaceTags) {
     const RUNG_Y = 80;
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
@@ -384,7 +387,11 @@ function renderNetwork(svg, networkXml) {
             const operandWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="operand"]`));
             const operandAccessUId = operandWire ? operandWire.querySelector('IdentCon').getAttribute('UId') : '';
             const operandAccess = accesses.find(a => a.getAttribute('UId') === operandAccessUId);
-            const operand = operandAccess ? `"${operandAccess.querySelector('Component').getAttribute('Name')}"` : '???';
+            let operand = '???';
+            if (operandAccess) {
+                const tagName = operandAccess.querySelector('Component').getAttribute('Name');
+                operand = interfaceTags.has(tagName) ? `#"${tagName}"` : `"${tagName}"`;
+            }
 
             createContact(svg, currentX, RUNG_Y, operand);
             createWire(svg, currentX - 10, RUNG_Y, currentX - 5, RUNG_Y);
@@ -403,7 +410,8 @@ function renderNetwork(svg, networkXml) {
                 if (identCon) {
                     const access = accesses.find(a => a.getAttribute('UId') === identCon.getAttribute('UId'));
                     if (access) {
-                        const operand = `"${access.querySelector('Component').getAttribute('Name')}"`;
+                        const tagName = access.querySelector('Component').getAttribute('Name');
+                        const operand = interfaceTags.has(tagName) ? `#"${tagName}"` : `"${tagName}"`;
                         const side = ['en', 'SIG', 'TIMESTAMP'].includes(pinName) ? 'left' : 'right';
                         blockPins.push({ name: pinName, operand: operand, side: side });
                     }
