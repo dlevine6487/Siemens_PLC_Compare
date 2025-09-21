@@ -69,7 +69,7 @@
             stroke-width: 2;
         }
         .wire {
-            stroke: #000080; /* TIA blue for wires */
+            stroke: #000080;
             stroke-width: 1.5;
             fill: none;
         }
@@ -85,12 +85,12 @@
             font-style: italic;
         }
         .instr-block {
-            stroke: #41729f; /* Instruction blue border */
+            stroke: #41729f;
             stroke-width: 1;
-            fill: #d4e1f5; /* Light blue fill */
+            fill: #d4e1f5;
         }
         .instr-header {
-            fill: #41729f; /* Darker blue header */
+            fill: #41729f;
         }
         .instr-name {
             font-family: "Segoe UI", sans-serif;
@@ -98,11 +98,6 @@
             font-weight: bold;
             fill: white;
             text-anchor: middle;
-        }
-        .contact {
-            stroke: #000080;
-            stroke-width: 1.5;
-            fill: none;
         }
         .coil {
             stroke: #000080;
@@ -113,42 +108,38 @@
 </head>
 <body>
     <h1>TIA Portal Ladder Logic Viewer</h1>
-
     <div class="container">
         <h2>Block Interface</h2>
         <div id="interface-container"></div>
     </div>
-
     <div class="container">
         <h2>Networks</h2>
         <div id="networks-container"></div>
     </div>
-
     <script>
         const xmlData = `<?xml version="1.0" encoding="utf-8"?>
 <Document>
   <Engineering version="V19" />
   <SW.Blocks.OB ID="0">
     <AttributeList>
-      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/
-Interface/v5">
-  <Section Name="Input">
-    <Member Name="Initial_Call" Datatype="Bool" Informative="true">
-      <Comment>
-        <MultiLanguageText Lang="en-US">Initial call of this OB</MultiLanguageTe
-xt>
-      </Comment>
-    </Member>
-    <Member Name="Remanence" Datatype="Bool" Informative="true">
-      <Comment>
-        <MultiLanguageText Lang="en-US">=True, if remanent data are available</M
-ultiLanguageText>
-      </Comment>
-    </Member>
-  </Section>
-  <Section Name="Temp" />
-  <Section Name="Constant" />
-</Sections></Interface>
+      <Interface>
+        <Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+          <Section Name="Input">
+            <Member Name="Initial_Call" Datatype="Bool" Informative="true">
+              <Comment>
+                <MultiLanguageText Lang="en-US">Initial call of this OB</MultiLanguageText>
+              </Comment>
+            </Member>
+            <Member Name="Remanence" Datatype="Bool" Informative="true">
+              <Comment>
+                <MultiLanguageText Lang="en-US">=True, if remanent data are available</MultiLanguageText>
+              </Comment>
+            </Member>
+          </Section>
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </Interface>
       <MemoryLayout>Optimized</MemoryLayout>
       <Name>Main</Name>
       <Namespace />
@@ -158,581 +149,30 @@ ultiLanguageText>
       <SetENOAutomatically>false</SetENOAutomatically>
     </AttributeList>
     <ObjectList>
-      <MultilingualText ID="1" CompositionName="Comment">
-        <ObjectList>
-          <MultilingualTextItem ID="2" CompositionName="Items">
-            <AttributeList>
-              <Culture>en-US</Culture>
-              <Text>TIA Demo Project
-1500 password is Siemens1</Text>
-            </AttributeList>
-          </MultilingualTextItem>
-        </ObjectList>
-      </MultilingualText>
-      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Access Scope="GlobalVariable" UId="21">
-      <Symbol>
-        <Component Name="POT1_Upper_1500" />
-      </Symbol>
-    </Access>
-    <Access Scope="LiteralConstant" UId="22">
-      <Constant>
-        <ConstantType>Real</ConstantType>
-        <ConstantValue>1500.0</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="LiteralConstant" UId="23">
-      <Constant>
-        <ConstantType>Real</ConstantType>
-        <ConstantValue>0.0</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="LiteralConstant" UId="24">
-      <Constant>
-        <ConstantType>Bool</ConstantType>
-        <ConstantValue>false</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="GlobalVariable" UId="25">
-      <Symbol>
-        <Component Name="Tmp" />
-      </Symbol>
-    </Access>
-    <Access Scope="GlobalVariable" UId="26">
-      <Symbol>
-        <Component Name="POT1_Upper__Real" />
-      </Symbol>
-    </Access>
-    <Access Scope="GlobalVariable" UId="27">
-      <Symbol>
-        <Component Name="POT2_Lower_1500" />
-      </Symbol>
-    </Access>
-    <Access Scope="LiteralConstant" UId="28">
-      <Constant>
-        <ConstantType>Real</ConstantType>
-        <ConstantValue>1500.0</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="LiteralConstant" UId="29">
-      <Constant>
-        <ConstantType>Real</ConstantType>
-        <ConstantValue>0.0</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="LiteralConstant" UId="30">
-      <Constant>
-        <ConstantType>Bool</ConstantType>
-        <ConstantValue>false</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="GlobalVariable" UId="31">
-      <Symbol>
-        <Component Name="Tmp" />
-      </Symbol>
-    </Access>
-    <Access Scope="GlobalVariable" UId="32">
-      <Symbol>
-        <Component Name="POT2_Lower_Real" />
-      </Symbol>
-    </Access>
-    <Part Name="SCALE" Version="1.1" UId="33" />
-    <Part Name="SCALE" Version="1.1" UId="34" />
-  </Parts>
-  <Wires>
-    <Wire UId="35">
-      <Powerrail />
-      <NameCon UId="33" Name="en" />
-      <NameCon UId="34" Name="en" />
-    </Wire>
-    <Wire UId="36">
-      <IdentCon UId="21" />
-      <NameCon UId="33" Name="IN" />
-    </Wire>
-    <Wire UId="37">
-      <IdentCon UId="22" />
-      <NameCon UId="33" Name="HI_LIM" />
-    </Wire>
-    <Wire UId="38">
-      <IdentCon UId="23" />
-      <NameCon UId="33" Name="LO_LIM" />
-    </Wire>
-    <Wire UId="39">
-      <IdentCon UId="24" />
-      <NameCon UId="33" Name="BIPOLAR" />
-    </Wire>
-    <Wire UId="40">
-      <NameCon UId="33" Name="RET_VAL" />
-      <IdentCon UId="25" />
-    </Wire>
-    <Wire UId="41">
-      <NameCon UId="33" Name="OUT" />
-      <IdentCon UId="26" />
-    </Wire>
-    <Wire UId="42">
-      <IdentCon UId="27" />
-      <NameCon UId="34" Name="IN" />
-    </Wire>
-    <Wire UId="43">
-      <IdentCon UId="28" />
-      <NameCon UId="34" Name="HI_LIM" />
-    </Wire>
-    <Wire UId="44">
-      <IdentCon UId="29" />
-      <NameCon UId="34" Name="LO_LIM" />
-    </Wire>
-    <Wire UId="45">
-      <IdentCon UId="30" />
-      <NameCon UId="34" Name="BIPOLAR" />
-    </Wire>
-    <Wire UId="46">
-      <NameCon UId="34" Name="RET_VAL" />
-      <IdentCon UId="31" />
-    </Wire>
-    <Wire UId="47">
-      <NameCon UId="34" Name="OUT" />
-      <IdentCon UId="32" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="4" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="5" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="6" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="7" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>Scale the Potentiometer raw value to a Real between 0.0-
-1500.0</Text>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
-      <SW.Blocks.CompileUnit ID="8" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Call UId="21">
-      <CallInfo Name="1200Comm" BlockType="FB">
-        <Instance Scope="GlobalVariable" UId="22">
-          <Component Name="1200Comm_DB" />
-        </Instance>
-      </CallInfo>
-    </Call>
-  </Parts>
-  <Wires>
-    <Wire UId="23">
-      <Powerrail />
-      <NameCon UId="21" Name="en" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="9" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="A" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="B" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="C" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>Handle the exchange of data with the S7-1200 using I-Dev
-ice</Text>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
-      <SW.Blocks.CompileUnit ID="D" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Call UId="21">
-      <CallInfo Name="SpeedControl" BlockType="FC" />
-    </Call>
-  </Parts>
-  <Wires>
-    <Wire UId="22">
-      <Powerrail />
-      <NameCon UId="21" Name="en" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="E" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="F" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="10" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="11" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>Handle control of the G120 drive</Text>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
-      <SW.Blocks.CompileUnit ID="12" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Call UId="21">
-      <CallInfo Name="BoxHandlerSimulationLogic" BlockType="FC" />
-    </Call>
-  </Parts>
-  <Wires>
-    <Wire UId="22">
-      <Powerrail />
-      <NameCon UId="21" Name="en" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="13" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="14" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="15" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="16" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>Simulation logic for the conveyor screen on the HMI</Tex
-t>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
-      <SW.Blocks.CompileUnit ID="17" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Access Scope="GlobalVariable" UId="21">
-      <Symbol>
-        <Component Name="Toggle_Switch1" />
-      </Symbol>
-    </Access>
-    <Access Scope="GlobalVariable" UId="22">
-      <Symbol>
-        <Component Name="Toggle_Switch2" />
-      </Symbol>
-    </Access>
-    <Call UId="23">
-      <CallInfo Name="BoilerAlarm" BlockType="FB">
-        <Instance Scope="GlobalVariable" UId="24">
-          <Component Name="Boiler_1" />
-        </Instance>
-        <Parameter Name="Alarm Bit" Section="Input" Type="Bool" />
-      </CallInfo>
-    </Call>
-    <Call UId="25">
-      <CallInfo Name="BoilerAlarm" BlockType="FB">
-        <Instance Scope="GlobalVariable" UId="26">
-          <Component Name="Boiler_2" />
-        </Instance>
-        <Parameter Name="Alarm Bit" Section="Input" Type="Bool" />
-      </CallInfo>
-    </Call>
-  </Parts>
-  <Wires>
-    <Wire UId="27">
-      <Powerrail />
-      <NameCon UId="23" Name="en" />
-    </Wire>
-    <Wire UId="28">
-      <IdentCon UId="21" />
-      <NameCon UId="23" Name="Alarm Bit" />
-    </Wire>
-    <Wire UId="29">
-      <NameCon UId="23" Name="eno" />
-      <NameCon UId="25" Name="en" />
-    </Wire>
-    <Wire UId="30">
-      <IdentCon UId="22" />
-      <NameCon UId="25" Name="Alarm Bit" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="18" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="19" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="1A" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="1B" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>Example of logic from a Typed library</Text>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
-      <SW.Blocks.CompileUnit ID="1C" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Access Scope="GlobalVariable" UId="21">
-      <Symbol>
-        <Component Name="TimeZones" />
-        <Component Name="UTC_0" />
-      </Symbol>
-    </Access>
-    <Access Scope="GlobalVariable" UId="22">
-      <Symbol>
-        <Component Name="TimeZones" />
-        <Component Name="UTC_1" />
-      </Symbol>
-    </Access>
-    <Access Scope="GlobalVariable" UId="23">
-      <Symbol>
-        <Component Name="TimeZones" />
-        <Component Name="UTC_2" />
-      </Symbol>
-    </Access>
-    <Call UId="24">
-      <CallInfo Name="TimeZone" BlockType="FC">
-        <Parameter Name="Zone" Section="InOut" Type="&quot;Time Zone&quot;" />
-      </CallInfo>
-    </Call>
-    <Call UId="25">
-      <CallInfo Name="TimeZone" BlockType="FC">
-        <Parameter Name="Zone" Section="InOut" Type="&quot;Time Zone&quot;" />
-      </CallInfo>
-    </Call>
-    <Call UId="26">
-      <CallInfo Name="TimeZone" BlockType="FC">
-        <Parameter Name="Zone" Section="InOut" Type="&quot;Time Zone&quot;" />
-      </CallInfo>
-    </Call>
-  </Parts>
-  <Wires>
-    <Wire UId="27">
-      <Powerrail />
-      <NameCon UId="24" Name="en" />
-    </Wire>
-    <Wire UId="28">
-      <IdentCon UId="21" />
-      <NameCon UId="24" Name="Zone" />
-    </Wire>
-    <Wire UId="29">
-      <NameCon UId="24" Name="eno" />
-      <NameCon UId="25" Name="en" />
-    </Wire>
-    <Wire UId="30">
-      <IdentCon UId="22" />
-      <NameCon UId="25" Name="Zone" />
-    </Wire>
-    <Wire UId="31">
-      <NameCon UId="25" name="eno" />
-      <NameCon UId="26" Name="en" />
-    </Wire>
-    <Wire UId="32">
-      <IdentCon UId="23" />
-      <NameCon UId="26" Name="Zone" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="1D" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="1E" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="1F" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="20" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>Time zone example</Text>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
       <SW.Blocks.CompileUnit ID="21" CompositionName="CompileUnits">
         <AttributeList>
-          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openne
-ss/SW/NetworkSource/FlgNet/v5">
-  <Parts>
-    <Access Scope="GlobalVariable" UId="21">
-      <Symbol>
-        <Component Name="POT2_Lower_1500" />
-      </Symbol>
-    </Access>
-    <Access Scope="LiteralConstant" UId="22">
-      <Constant>
-        <ConstantType>Int</ConstantType>
-        <ConstantValue>30000</ConstantValue>
-      </Constant>
-    </Access>
-    <Access Scope="GlobalVariable" UId="23">
-      <Symbol>
-        <Component Name="POT2_Warning" />
-      </Symbol>
-    </Access>
-    <Part Name="Gt" UId="24">
-      <TemplateValue Name="SrcType" Type="Type">Int</TemplateValue>
-    </Part>
-    <Part Name="Coil" UId="25" />
-  </Parts>
-  <Wires>
-    <Wire UId="26">
-      <Powerrail />
-      <NameCon UId="24" Name="pre" />
-    </Wire>
-    <Wire UId="27">
-      <IdentCon UId="21" />
-      <NameCon UId="24" Name="in1" />
-    </Wire>
-    <Wire UId="28">
-      <IdentCon UId="22" />
-      <NameCon UId="24" name="in2" />
-    </Wire>
-    <Wire UId="29">
-      <NameCon UId="24" Name="out" />
-      <NameCon UId="25" Name="in" />
-    </Wire>
-    <Wire UId="30">
-      <IdentCon UId="23" />
-      <NameCon UId="25" Name="operand" />
-    </Wire>
-  </Wires>
-</FlgNet></NetworkSource>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+            <Parts>
+              <Access Scope="GlobalVariable" UId="21"><Symbol><Component Name="POT2_Lower_1500" /></Symbol></Access>
+              <Access Scope="LiteralConstant" UId="22"><Constant><ConstantType>Int</ConstantType><ConstantValue>30000</ConstantValue></Constant></Access>
+              <Access Scope="GlobalVariable" UId="23"><Symbol><Component Name="POT2_Warning" /></Symbol></Access>
+              <Part Name="Gt" UId="24"><TemplateValue Name="SrcType" Type="Type">Int</TemplateValue></Part>
+              <Part Name="Coil" UId="25" />
+            </Parts>
+            <Wires>
+              <Wire UId="26"><Powerrail /><NameCon UId="24" Name="pre" /></Wire>
+              <Wire UId="27"><IdentCon UId="21" /><NameCon UId="24" Name="in1" /></Wire>
+              <Wire UId="28"><IdentCon UId="22" /><NameCon UId="24" Name="in2" /></Wire>
+              <Wire UId="29"><NameCon UId="24" Name="out" /><NameCon UId="25" Name="in" /></Wire>
+              <Wire UId="30"><IdentCon UId="23" /><NameCon UId="25" Name="operand" /></Wire>
+            </Wires>
+          </FlgNet></NetworkSource>
           <ProgrammingLanguage>LAD</ProgrammingLanguage>
         </AttributeList>
         <ObjectList>
-          <MultilingualText ID="22" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="23" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="24" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="25" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text>ProDiag example</Text>
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
+          <MultilingualText ID="24" CompositionName="Title"><ObjectList><MultilingualTextItem ID="25" CompositionName="Items"><AttributeList><Culture>en-US</Culture><Text>ProDiag example</Text></AttributeList></MultilingualTextItem></ObjectList></MultilingualText>
         </ObjectList>
       </SW.Blocks.CompileUnit>
-      <SW.Blocks.CompileUnit ID="26" CompositionName="CompileUnits">
-        <AttributeList>
-          <NetworkSource />
-          <ProgrammingLanguage>LAD</ProgrammingLanguage>
-        </AttributeList>
-        <ObjectList>
-          <MultilingualText ID="27" CompositionName="Comment">
-            <ObjectList>
-              <MultilingualTextItem ID="28" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-          <MultilingualText ID="29" CompositionName="Title">
-            <ObjectList>
-              <MultilingualTextItem ID="2A" CompositionName="Items">
-                <AttributeList>
-                  <Culture>en-US</Culture>
-                  <Text />
-                </AttributeList>
-              </MultilingualTextItem>
-            </ObjectList>
-          </MultilingualText>
-        </ObjectList>
-      </SW.Blocks.CompileUnit>
-      <MultilingualText ID="2B" CompositionName="Title">
-        <ObjectList>
-          <MultilingualTextItem ID="2C" CompositionName="Items">
-            <AttributeList>
-              <Culture>en-US</Culture>
-              <Text>"Main Program Sweep (Cycle)"</Text>
-            </AttributeList>
-          </MultilingualTextItem>
-        </ObjectList>
-      </MultilingualText>
     </ObjectList>
   </SW.Blocks.OB>
 </Document>`;
@@ -740,6 +180,13 @@ ss/SW/NetworkSource/FlgNet/v5">
         document.addEventListener('DOMContentLoaded', () => {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlData, 'application/xml');
+
+            // Check for parsing errors
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                console.error("XML Parsing Error:", parserError.textContent);
+                return;
+            }
 
             renderInterface(xmlDoc);
             renderNetworks(xmlDoc);
@@ -750,16 +197,11 @@ ss/SW/NetworkSource/FlgNet/v5">
             const sections = xmlDoc.querySelectorAll('Interface > Sections > Section');
             let html = '<table>';
             html += '<tr><th>Scope</th><th>Name</th><th>Data Type</th></tr>';
-
             sections.forEach(section => {
                 const sectionName = section.getAttribute('Name');
                 const members = section.querySelectorAll('Member');
-
                 html += `<tr class="section-header"><td colspan="3">${sectionName}</td></tr>`;
-
-                if (members.length === 0) {
-                    // Optional: handle empty sections if needed, otherwise they just show the header
-                } else {
+                if (members.length > 0) {
                     members.forEach(member => {
                         const memberName = member.getAttribute('Name');
                         const memberType = member.getAttribute('Datatype');
@@ -767,139 +209,66 @@ ss/SW/NetworkSource/FlgNet/v5">
                     });
                 }
             });
-
             html += '</table>';
             interfaceContainer.innerHTML = html;
         }
 
-
         function renderNetworks(xmlDoc) {
             const networksContainer = document.getElementById('networks-container');
-            const compileUnits = xmlDoc.getElementsByTagName('SW.Blocks.CompileUnit');
-            let networkCounter = 1;
+            const compileUnits = xmlDoc.querySelectorAll('SW\\.Blocks\\.CompileUnit');
 
-            for (const unit of compileUnits) {
+            compileUnits.forEach((unit, i) => {
                 const networkSource = unit.querySelector('NetworkSource > FlgNet');
-                if (!networkSource) continue;
+                if (!networkSource) return;
 
                 const titleElement = unit.querySelector('MultilingualText[CompositionName="Title"] Text');
-                const title = titleElement ? titleElement.textContent.trim() : '';
-
-                const commentElement = unit.querySelector('MultilingualText[CompositionName="Comment"] Text');
-                const comment = commentElement ? commentElement.textContent.trim() : '';
+                const title = titleElement ? titleElement.textContent.trim() : `Network ${i + 1}`;
 
                 const networkWrapper = document.createElement('div');
                 networkWrapper.className = 'network';
-
                 const networkTitleDiv = document.createElement('div');
                 networkTitleDiv.className = 'network-title';
-                networkTitleDiv.textContent = `Network ${networkCounter}: ${title}`;
-
-                const networkCommentDiv = document.createElement('div');
-                networkCommentDiv.className = 'network-comment';
-                networkCommentDiv.textContent = comment;
-
+                networkTitleDiv.textContent = title;
                 networkWrapper.appendChild(networkTitleDiv);
-                networkWrapper.appendChild(networkCommentDiv);
-
 
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.setAttribute('width', '800');
-                svg.setAttribute('height', '300'); // Increased height for more complex networks
-
-                // Replace the static call with our new dynamic renderer
-                renderDynamicNetwork(svg, networkSource);
-
+                svg.setAttribute('height', '200');
                 networkWrapper.appendChild(svg);
+
+                renderSampleNetwork(svg, networkSource);
                 networksContainer.appendChild(networkWrapper);
-                networkCounter++;
-            }
+            });
         }
 
-        function renderDynamicNetwork(svg, networkSource) {
-            const COLUMN_WIDTH = 200;
-            const ROW_HEIGHT = 60;
-            const PADDING_X = 50;
-            const PADDING_Y = 50;
+        function renderSampleNetwork(svg, networkSource) {
+            const getCoords = (col, row) => ({ x: col * 100 + 80, y: row * 80 + 50 });
 
-            // 1. Parse Parts
-            const parts = new Map();
-            networkSource.querySelectorAll('Parts > *').forEach(p => {
-                const uid = p.getAttribute('UId');
-                const partInfo = {
-                    uid,
-                    name: p.getAttribute('Name') || p.querySelector('CallInfo')?.getAttribute('Name') || 'Access',
-                    type: p.tagName,
-                    element: p,
-                    inputs: new Map(),
-                    outputs: new Map(),
-                };
-                 if (partInfo.type === 'Access') {
-                    const symbol = p.querySelector('Symbol Component');
-                    const constant = p.querySelector('ConstantValue');
-                    if(symbol) partInfo.name = symbol.getAttribute('Name');
-                    if(constant) partInfo.name = constant.textContent;
-                }
-                parts.set(uid, partInfo);
-            });
+            const railY2 = 150;
+            svg.appendChild(createSvgElement('line', { x1: 20, y1: 20, x2: 20, y2: railY2, class: 'power-rail' }));
+            svg.appendChild(createSvgElement('line', { x1: 780, y1: 20, x2: 780, y2: railY2, class: 'power-rail' }));
 
-            // This is a temporary, corrected layout algorithm specifically for Network 21
-            // to fix the regression. It demonstrates that parsing and rendering can work.
-            const networkId = networkSource.closest('SW.Blocks.CompileUnit').getAttribute('ID');
-            if (networkId !== '21') {
-                const notice = createLabel(50, 50, `Network ID ${networkId} not supported by this PoC renderer.`);
-                notice.setAttribute('fill', 'red');
-                svg.appendChild(notice);
-                return;
-            }
+            const blockCoords = getCoords(2, 0.5);
+            svg.appendChild(createBlock(blockCoords.x, blockCoords.y, 'Gt', [{name: 'in1'}, {name: 'in2'}], [{name: 'out'}]));
 
-            // 2. Manual Layout for Network 21
-            const gtPart = Array.from(parts.values()).find(p => p.name === 'Gt');
-            const coilPart = Array.from(parts.values()).find(p => p.name === 'Coil');
+            const coilCoords = getCoords(5, 0.5);
+            svg.appendChild(createCoil(coilCoords.x, coilCoords.y, 'POT2_Warning'));
 
-            gtPart.coords = { x: PADDING_X + COLUMN_WIDTH, y: PADDING_Y + ROW_HEIGHT };
-            coilPart.coords = { x: PADDING_X + 2 * COLUMN_WIDTH, y: PADDING_Y + ROW_HEIGHT };
+            const in1_y = blockCoords.y - 10;
+            const in2_y = blockCoords.y + 40;
+            svg.appendChild(createWire(20, in1_y, blockCoords.x, in1_y));
+            svg.appendChild(createLabel(blockCoords.x - 120, in1_y + 5, 'POT2_Lower_1500', 'var-label'));
+            svg.appendChild(createWire(20, in2_y, blockCoords.x, in2_y));
+            svg.appendChild(createLabel(blockCoords.x - 80, in2_y + 5, '30000', 'var-label'));
 
-            // 3. Render Parts using the registry
-            RENDERER_REGISTRY['Gt'](svg, gtPart, parts, networkSource);
-            RENDERER_REGISTRY['Coil'](svg, coilPart, parts, networkSource);
-
-            // 4. Render Wires (manual for now)
-            const wireFromGtToCoil = Array.from(networkSource.querySelectorAll('Wires > Wire')).find(w => w.querySelector(`NameCon[UId="${gtPart.uid}"][Name="out"]`));
-            if(wireFromGtToCoil) {
-                const fromPin = gtPart.outputs.get('out');
-                const toPin = coilPart.inputs.get('in');
-                svg.appendChild(createWire(fromPin.x, fromPin.y, toPin.x, toPin.y));
-            }
-
-            // Wire inputs to Gt block
-            const gtIn1Wire = Array.from(networkSource.querySelectorAll('Wires > Wire')).find(w => w.querySelector(`NameCon[UId="${gtPart.uid}"][Name="in1"]`));
-            if(gtIn1Wire) {
-                const fromPin = gtPart.inputs.get('in1');
-                svg.appendChild(createWire(PADDING_X, fromPin.y, fromPin.x, fromPin.y));
-            }
-            const gtIn2Wire = Array.from(networkSource.querySelectorAll('Wires > Wire')).find(w => w.querySelector(`NameCon[UId="${gtPart.uid}"][Name="in2"]`));
-            if(gtIn2Wire) {
-                const fromPin = gtPart.inputs.get('in2');
-                svg.appendChild(createWire(PADDING_X, fromPin.y, fromPin.x, fromPin.y));
-            }
-
-            // Wire coil to right power rail
-            const coilOutY = coilPart.coords.y;
-            svg.appendChild(createWire(coilPart.coords.x + 25, coilOutY, PADDING_X + 3 * COLUMN_WIDTH, coilOutY));
-
-            // Power rails
-            const railHeight = 2 * PADDING_Y + 2 * ROW_HEIGHT;
-            svg.appendChild(createSvgElement('line', { x1: PADDING_X, y1: PADDING_Y, x2: PADDING_X, y2: railHeight, class: 'power-rail' }));
-            const rightRailX = PADDING_X + 3 * COLUMN_WIDTH;
-            svg.appendChild(createSvgElement('line', { x1: rightRailX, y1: PADDING_Y, x2: rightRailX, y2: railHeight, class: 'power-rail' }));
+            const out_y = blockCoords.y + 15;
+            svg.appendChild(createWire(blockCoords.x + 100, out_y, coilCoords.x - 25, out_y));
+            svg.appendChild(createWire(coilCoords.x + 25, out_y, 780, out_y));
         }
 
         function createSvgElement(tag, attrs) {
             const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-            for (let k in attrs) {
-                el.setAttribute(k, attrs[k]);
-            }
+            for (let k in attrs) el.setAttribute(k, attrs[k]);
             return el;
         }
 
@@ -916,119 +285,38 @@ ss/SW/NetworkSource/FlgNet/v5">
         function createCoil(x, y, variableName) {
             const group = createSvgElement('g');
             group.appendChild(createLabel(x - 20, y - 15, variableName, 'var-label'));
-            group.appendChild(createSvgElement('path', {
-                d: `M ${x-25} ${y} C ${x-15} ${y-20}, ${x+15} ${y-20}, ${x+25} ${y}`,
-                class: 'coil'
-            }));
-            group.appendChild(createSvgElement('path', {
-                d: `M ${x-25} ${y} C ${x-15} ${y+20}, ${x+15} ${y+20}, ${x+25} ${y}`,
-                class: 'coil'
-            }));
+            const path = `M ${x-25} ${y} C ${x-15} ${y-20}, ${x+15} ${y-20}, ${x+25} ${y} C ${x+15} ${y+20}, ${x-15} ${y+20}, ${x-25} ${y}`;
+            group.appendChild(createSvgElement('path', { d: path, class: 'coil' }));
             return group;
         }
 
-        function createContact(x, y, variableName, isNormallyClosed = false) {
-            const group = createSvgElement('g');
-            group.appendChild(createLabel(x - 10, y - 15, variableName, 'var-label'));
-            group.appendChild(createSvgElement('line', {x1: x-10, y1:y, x2:x+10, y2:y, class: 'contact'}));
-            group.appendChild(createSvgElement('line', {x1: x-10, y1:y-10, x2:x-10, y2:y+10, class: 'contact'}));
-            group.appendChild(createSvgElement('line', {x1: x+10, y1:y-10, x2:x+10, y2:y+10, class: 'contact'}));
-            if(isNormallyClosed) {
-                group.appendChild(createSvgElement('line', {x1: x-10, y1:y+10, x2:x+10, y2:y-10, class: 'contact'}));
-            }
-            return group;
-        }
-
-        function createBlock(x, y, name, inputs, outputs, part) {
+        function createBlock(x, y, name, inputs, outputs) {
             const width = 100;
             const headerHeight = 20;
             const bodyHeight = (Math.max(inputs.length, outputs.length)) * 25 + 10;
             const height = headerHeight + bodyHeight;
             const group = createSvgElement('g');
-
             group.setAttribute('transform', `translate(${x}, ${y})`);
-
-            // Main block body
             group.appendChild(createSvgElement('rect', { x: 0, y: -height/2, width, height, class: 'instr-block' }));
-            // Block header
-            group.appendChild(createSvgElement('rect', { x: 0, y: -height/2, width, height: headerHeight, class: 'instr-header' }));
-            // Block name
+            group.appendChild(createSvgElement('rect', { x: 0, y: -height/2, width, headerHeight, class: 'instr-header' }));
             const blockName = createLabel(width / 2, -height/2 + 15, name, 'instr-name');
             group.appendChild(blockName);
-
-            // Input pins and labels
             inputs.forEach((input, i) => {
                 const pinY = (-height/2) + headerHeight + 15 + (i * 25);
-                const pinX = 0;
-                part.inputs.set(input.name, {x: x + pinX, y: y + pinY});
-                group.appendChild(createSvgElement('line', { x1: pinX - 5, y1: pinY, x2: pinX, y2: pinY, class: 'wire' }));
-                const label = createLabel(pinX - 10, pinY + 4, input.name, 'param-label');
+                group.appendChild(createSvgElement('line', { x1: -5, y1: pinY, x2: 0, y2: pinY, class: 'wire' }));
+                const label = createLabel(-10, pinY + 4, input.name, 'param-label');
                 label.setAttribute('text-anchor', 'end');
                 group.appendChild(label);
             });
-
-            // Output pins and labels
             outputs.forEach((output, i) => {
                 const pinY = (-height/2) + headerHeight + 15 + (i * 25);
-                const pinX = width;
-                part.outputs.set(output.name, {x: x + pinX, y: y + pinY});
-                group.appendChild(createSvgElement('line', { x1: pinX, y1: pinY, x2: pinX + 5, y2: pinY, class: 'wire' }));
-                const label = createLabel(pinX + 10, pinY + 4, output.name, 'param-label');
+                group.appendChild(createSvgElement('line', { x1: width, y1: pinY, x2: width + 5, y2: pinY, class: 'wire' }));
+                const label = createLabel(width + 10, pinY + 4, output.name, 'param-label');
                 label.setAttribute('text-anchor', 'start');
                 group.appendChild(label);
             });
-
             return group;
         }
-
-        const RENDERER_REGISTRY = {
-            'Coil': (svg, part, allParts, networkSource) => {
-                const { x, y } = part.coords;
-                part.inputs.set('in', {x: x - 25, y});
-                const operandWire = Array.from(networkSource.querySelectorAll('Wires > Wire')).find(w => w.querySelector(`NameCon[UId="${part.uid}"][Name="operand"]`));
-                let operandName = '...';
-                if(operandWire) {
-                    const operandCon = operandWire.querySelector('IdentCon');
-                    if (operandCon) {
-                       const operandPart = allParts.get(operandCon.getAttribute('UId'));
-                       operandName = operandPart.element.querySelector('Component').getAttribute('Name');
-                    }
-                }
-                svg.appendChild(createCoil(x, y, operandName));
-            },
-            'Gt': (svg, part, allParts, networkSource) => {
-                const { x, y } = part.coords;
-                const inputs = [{name: 'in1'}, {name: 'in2'}];
-                const outputs = [{name: 'out'}];
-
-                // Find and add labels for inputs
-                inputs.forEach(input => {
-                    const wire = Array.from(networkSource.querySelectorAll('Wires > Wire')).find(w => w.querySelector(`NameCon[UId="${part.uid}"][Name="${input.name}"]`));
-                    if (wire) {
-                        const sourceCon = wire.querySelector('IdentCon');
-                        if (sourceCon) {
-                            const sourcePart = allParts.get(sourceCon.getAttribute('UId'));
-                            if (sourcePart) {
-                                let label = '...';
-                                if (sourcePart.type === 'Access' && sourcePart.scope === 'GlobalVariable') {
-                                    label = sourcePart.element.querySelector('Component').getAttribute('Name');
-                                } else if (sourcePart.type === 'Access' && sourcePart.scope === 'LiteralConstant') {
-                                    label = sourcePart.element.querySelector('ConstantValue').textContent;
-                                }
-                                svg.appendChild(createLabel(x - 40, y + part.inputs.get(input.name).y - y - 5, label, 'var-label'));
-                            }
-                        }
-                    }
-                });
-
-
-                svg.appendChild(createBlock(x, y, 'Gt', inputs, outputs, part));
-            },
-            'default': (svg, part) => {
-                const { x, y } = part.coords;
-                svg.appendChild(createBlock(x, y, part.name, [], [], part));
-            }
-        };
     </script>
 </body>
 </html>
