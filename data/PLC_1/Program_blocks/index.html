@@ -318,7 +318,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             createContact(svg, currentX, RUNG_Y, operand);
             const outWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="out"]`));
             if (outWire) {
-                 createWire(svg, currentX, RUNG_Y, currentX + 40, RUNG_Y);
+                 createWire(svg, currentX + 5, RUNG_Y, currentX + 40, RUNG_Y);
                  currentX += 40;
             }
         } else if (partName === 'RD_SYS_T' || partName === 'Program_Alarm') {
@@ -327,9 +327,17 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             const instanceEl = part.querySelector("Instance Component");
             const instanceName = instanceEl ? `"${instanceEl.getAttribute("Name")}"` : null;
 
-            const INPUT_PINS = ['EN', 'en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
+            const INPUT_PINS = ['en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
 
-            blockWires.sort((a,b) => (a.querySelector('NameCon').getAttribute('Name') > b.querySelector('NameCon').getAttribute('Name')) ? 1 : -1)
+            blockWires.sort((a,b) => {
+                const aName = a.querySelector('NameCon').getAttribute('Name');
+                const bName = b.querySelector('NameCon').getAttribute('Name');
+                if (aName === 'en') return -1;
+                if (bName === 'en') return 1;
+                if (aName === 'eno') return 1;
+                if (bName === 'eno') return -1;
+                return aName.localeCompare(bName);
+            })
             .forEach(w => {
                 const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
                 const pinName = nameCon.getAttribute("Name");
@@ -338,13 +346,13 @@ function renderNetwork(svg, networkXml, interfaceTags) {
                 blockPins.push({ name: pinName.toUpperCase(), operand: operand, side: side });
             });
 
+            const blockX = currentX;
+            const blockWidth = 150;
             const yOffset = instanceName ? 30 : 15;
             const leftPins = blockPins.filter(p => p.side === 'left').length;
             const rightPins = blockPins.filter(p => p.side === 'right').length;
             const blockHeight = 10 + (Math.max(leftPins, rightPins) * 22);
             const blockY = RUNG_Y - (blockHeight / 2) - yOffset;
-            const blockX = currentX;
-            const blockWidth = 150;
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, blockPins);
 
