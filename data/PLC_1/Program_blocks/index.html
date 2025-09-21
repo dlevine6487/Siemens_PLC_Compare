@@ -357,19 +357,31 @@ function processAndRender(xmlString) {
     });
 }
 
+function getOperand(wire, accesses, interfaceTags) {
+    if (!wire) return '???';
+    const identCon = wire.querySelector('IdentCon');
+    if (!identCon) return '???';
+
+    const access = accesses.find(a => a.getAttribute('UId') === identCon.getAttribute('UId'));
+    if (access) {
+        const tagName = access.querySelector('Component').getAttribute('Name');
+        return interfaceTags.has(tagName) ? `#"${tagName}"` : `"${tagName}"`;
+    }
+    return '???';
+}
+
 function renderNetwork(svg, networkXml, interfaceTags) {
-    const RUNG_Y = 80;
+    const RUNG_Y = 100; // Increased RUNG_Y to give more vertical space
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
 
-    createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 80);
-    createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 80);
+    createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 100);
+    createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 100);
 
     const parts = Array.from(networkXml.querySelectorAll("Part"));
     const accesses = Array.from(networkXml.querySelectorAll("Access"));
     const wires = Array.from(networkXml.querySelectorAll("Wire"));
 
-    // Simplified rendering logic for this POC
     let currentX = LEFT_RAIL_X;
     createWire(svg, currentX, RUNG_Y, currentX + 60, RUNG_Y);
     currentX += 60;
@@ -385,14 +397,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
         if (partName === 'Contact') {
             const operandWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="operand"]`));
-            const operandAccessUId = operandWire ? operandWire.querySelector('IdentCon').getAttribute('UId') : '';
-            const operandAccess = accesses.find(a => a.getAttribute('UId') === operandAccessUId);
-            let operand = '???';
-            if (operandAccess) {
-                const tagName = operandAccess.querySelector('Component').getAttribute('Name');
-                operand = interfaceTags.has(tagName) ? `#"${tagName}"` : `"${tagName}"`;
-            }
-
+            const operand = getOperand(operandWire, accesses, interfaceTags);
             createContact(svg, currentX, RUNG_Y, operand);
             createWire(svg, currentX - 10, RUNG_Y, currentX - 5, RUNG_Y);
             currentX += 10;
@@ -403,19 +408,15 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             const blockPins = [];
             const blockWires = wires.filter(w => w.querySelector(`NameCon[UId="${partUid}"]`));
 
+            const INPUT_PINS = ['en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
+
             blockWires.forEach(w => {
                 const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
                 const pinName = nameCon.getAttribute("Name");
-                const identCon = w.querySelector('IdentCon');
-                if (identCon) {
-                    const access = accesses.find(a => a.getAttribute('UId') === identCon.getAttribute('UId'));
-                    if (access) {
-                        const tagName = access.querySelector('Component').getAttribute('Name');
-                        const operand = interfaceTags.has(tagName) ? `#"${tagName}"` : `"${tagName}"`;
-                        const side = ['en', 'SIG', 'TIMESTAMP'].includes(pinName) ? 'left' : 'right';
-                        blockPins.push({ name: pinName, operand: operand, side: side });
-                    }
-                }
+                if (pinName === 'en' || pinName === 'eno') return; // Skip EN/ENO, handled by main rung
+                const operand = getOperand(w, accesses, interfaceTags);
+                const side = INPUT_PINS.includes(pinName) ? 'left' : 'right';
+                blockPins.push({ name: pinName, operand: operand, side: side });
             });
 
             const blockX = currentX + 20;
@@ -423,7 +424,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             const leftPins = blockPins.filter(p => p.side === 'left').length;
             const rightPins = blockPins.filter(p => p.side === 'right').length;
             const blockHeight = 40 + (Math.max(leftPins, rightPins) * 25);
-            const blockY = RUNG_Y - 35;
+            const blockY = RUNG_Y - (blockHeight / 2);
             const enPinY = blockY + 22;
 
             createWire(svg, currentX, RUNG_Y, blockX, RUNG_Y);
