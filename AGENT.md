@@ -57,3 +57,15 @@ Use JavaScript to dynamically generate SVG elements representing one or two simp
 Use CSS to style the output to look as close to the TIA Portal editor as possible.
 
 This proof-of-concept will serve as the architectural foundation for the full viewer.
+
+Using the Program Blocks structure, 
+data/PLC_1/Program_blocks
+
+Use the Index.html found here
+data/PLC_1/Program_blocks/index.html
+
+Use the Good Example.png found here
+data/PLC_1/Program_blocks/Good example.png
+
+And compare it to your generated output from internal testing, for iterative feedback in this GUI. I want you to send the output and each time replace Output.png, and display the png in line here as you see it and generate for saving. 
+data/PLC_1/Program_blocks/output.png
