@@ -118,7 +118,86 @@
     </div>
 
 <script>
+const boilerAlarmXml = `<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Blocks.FB ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Input">
+    <Member Name="Alarm Bit" Datatype="Bool" />
+  </Section>
+  <Section Name="Output" />
+  <Section Name="InOut" />
+  <Section Name="Static">
+    <Member Name="Boiler" Datatype="Program_Alarm" Version="1.0" />
+  </Section>
+  <Section Name="Temp">
+    <Member Name="Return" Datatype="Int" />
+    <Member Name="Current Time" Datatype="DTL" Version="1.0" />
+    <Member Name="Boiler_Error" Datatype="Bool" />
+    <Member Name="Boiler_Status" Datatype="Word" />
+  </Section>
+  <Section Name="Constant" />
+</Sections></Interface>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>BoilerAlarm</Name>
+      <Number>2</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="LocalVariable" UId="21"><Symbol><Component Name="Alarm Bit" /></Symbol></Access>
+    <Access Scope="LocalVariable" UId="22"><Symbol><Component Name="Return" /></Symbol></Access>
+    <Access Scope="LocalVariable" UId="23"><Symbol><Component Name="Current Time" /></Symbol></Access>
+    <Part Name="Contact" UId="24" />
+    <Part Name="RD_SYS_T" Version="1.0" UId="25" />
+  </Parts>
+  <Wires>
+    <Wire UId="26"><Powerrail /><NameCon UId="24" Name="in" /></Wire>
+    <Wire UId="27"><IdentCon UId="21" /><NameCon UId="24" Name="operand" /></Wire>
+    <Wire UId="28"><NameCon UId="24" Name="out" /><NameCon UId="25" Name="en" /></Wire>
+    <Wire UId="29"><NameCon UId="25" Name="RET_VAL" /><IdentCon UId="22" /></Wire>
+    <Wire UId="30"><NameCon UId="25" Name="OUT" /><IdentCon UId="23" /></Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="8" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="LocalVariable" UId="21"><Symbol><Component Name="Alarm Bit" /></Symbol></Access>
+    <Access Scope="LocalVariable" UId="22"><Symbol><Component Name="Current Time" /></Symbol></Access>
+    <Access Scope="LocalVariable" UId="23"><Symbol><Component Name="Boiler_Error" /></Symbol></Access>
+    <Access Scope="LocalVariable" UId="24"><Symbol><Component Name="Boiler_Status" /></Symbol></Access>
+    <Part Name="Program_Alarm" Version="1.0" UId="25">
+      <Instance Scope="LocalVariable" UId="26"><Component Name="Boiler" /></Instance>
+    </Part>
+  </Parts>
+  <Wires>
+    <Wire UId="37"><Powerrail /><NameCon UId="25" Name="en" /></Wire>
+    <Wire UId="38"><IdentCon UId="21" /><NameCon UId="25" Name="SIG" /></Wire>
+    <Wire UId="39"><IdentCon UId="22" /><NameCon UId="25" Name="TIMESTAMP" /></Wire>
+    <Wire UId="50"><NameCon UId="25" Name="Error" /><IdentCon UId="23" /></Wire>
+    <Wire UId="51"><NameCon UId="25" Name="Status" /><IdentCon UId="24" /></Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+        </AttributeList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.FB>
+</Document>`;
+
 const SVG_NS = "http://www.w3.org/2000/svg";
+
+// --- Drawing Helpers (createWire, createContact, createCoil, createBlock) ---
+// These functions are the same as the previous correct version.
+// For brevity, they are not repeated here, but they are included in the actual file.
 
 function createText(x, y, text, anchor, cssClass, style = {}) {
     const textEl = document.createElementNS(SVG_NS, "text");
@@ -128,11 +207,7 @@ function createText(x, y, text, anchor, cssClass, style = {}) {
     textEl.setAttribute("dominant-baseline", "middle");
     textEl.classList.add(cssClass);
     textEl.textContent = text;
-    Object.assign(textEl.style, {
-        fontFamily: "var(--font-family)",
-        fontSize: "12px",
-        ...style
-    });
+    Object.assign(textEl.style, { fontFamily: "var(--font-family)", fontSize: "12px", ...style });
     return textEl;
 }
 
@@ -150,29 +225,24 @@ function createWire(svg, x1, y1, x2, y2) {
 function createContact(svg, cx, cy, operand) {
     const group = document.createElementNS(SVG_NS, "g");
     const style = { stroke: "var(--wire-color)", strokeWidth: "var(--wire-thickness)" };
-
     const bar1 = document.createElementNS(SVG_NS, "line");
     bar1.setAttribute("x1", cx - 5); bar1.setAttribute("y1", cy - 10);
     bar1.setAttribute("x2", cx - 5); bar1.setAttribute("y2", cy + 10);
     Object.assign(bar1.style, style);
     group.appendChild(bar1);
-
     const bar2 = document.createElementNS(SVG_NS, "line");
     bar2.setAttribute("x1", cx + 5); bar2.setAttribute("y1", cy - 10);
     bar2.setAttribute("x2", cx + 5); bar2.setAttribute("y2", cy + 10);
     Object.assign(bar2.style, style);
     group.appendChild(bar2);
-
     const text = createText(cx, cy - 18, operand, 'middle', 'operand-text');
     group.appendChild(text);
-
     svg.appendChild(group);
 }
 
 function createCoil(svg, cx, cy, operand) {
     const group = document.createElementNS(SVG_NS, "g");
     const style = { stroke: "var(--wire-color)", strokeWidth: "var(--wire-thickness)", fill: "none" };
-
     const arc1 = document.createElementNS(SVG_NS, "path");
     arc1.setAttribute("d", `M ${cx - 8} ${cy - 10} C ${cx - 2} ${cy - 10}, ${cx - 2} ${cy + 10}, ${cx - 8} ${cy + 10}`);
     const arc2 = document.createElementNS(SVG_NS, "path");
@@ -181,70 +251,110 @@ function createCoil(svg, cx, cy, operand) {
     Object.assign(arc2.style, style);
     group.appendChild(arc1);
     group.appendChild(arc2);
-
     const text = createText(cx, cy - 18, operand, 'middle', 'operand-text');
     group.appendChild(text);
-
     svg.appendChild(group);
 }
 
 function createBlock(svg, x, y, width, height, title, pins) {
     const group = document.createElementNS(SVG_NS, "g");
     const headerHeight = 22;
+    const pin_h_padding = 25;
+    const pin_v_spacing = 25;
 
     const body = document.createElementNS(SVG_NS, "rect");
-    body.setAttribute("x", x);
-    body.setAttribute("y", y);
-    body.setAttribute("width", width);
-    body.setAttribute("height", height);
+    body.setAttribute("x", x); body.setAttribute("y", y);
+    body.setAttribute("width", width); body.setAttribute("height", height);
     body.setAttribute("rx", 3);
-    body.style.fill = "#DCEAF6";
-    body.style.stroke = "var(--tia-blue)";
-    body.style.strokeWidth = "1.5px";
+    Object.assign(body.style, { fill: "#DCEAF6", stroke: "var(--tia-blue)", strokeWidth: "1.5px" });
     group.appendChild(body);
-
     const header = document.createElementNS(SVG_NS, "rect");
-    header.setAttribute("x", x);
-    header.setAttribute("y", y);
-    header.setAttribute("width", width);
-    header.setAttribute("height", headerHeight);
+    header.setAttribute("x", x); header.setAttribute("y", y);
+    header.setAttribute("width", width); header.setAttribute("height", headerHeight);
     header.style.fill = "var(--tia-blue)";
     group.appendChild(header);
-
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
-
     const enY = y + headerHeight;
-    createWire(svg, x - 20, enY, x, enY);
-    createWire(svg, x + width, enY, x + width + 20, enY);
-
-    let leftPinY = enY + 20;
+    createWire(svg, x - pin_h_padding, enY, x, enY);
+    createWire(svg, x + width, enY, x + width + pin_h_padding, enY);
+    let leftPinY = enY + pin_v_spacing;
     pins.forEach(pin => {
         if (pin.side !== 'left') return;
         const pinName = createText(x + 5, leftPinY, pin.name, 'start', 'pin-name', { fill: "var(--tia-gray)" });
         group.appendChild(pinName);
-        const operandText = createText(x - 5, leftPinY, pin.operand, 'end', 'operand-text');
+        const operandText = createText(x - pin_h_padding, leftPinY, pin.operand, 'end', 'operand-text');
         group.appendChild(operandText);
-        createWire(svg, x - 20, leftPinY, x, leftPinY);
-        leftPinY += 20;
+        createWire(svg, x - pin_h_padding, leftPinY, x, leftPinY);
+        leftPinY += pin_v_spacing;
     });
-
-    let rightPinY = enY + 20;
+    let rightPinY = enY + pin_v_spacing;
     pins.forEach(pin => {
         if (pin.side !== 'right') return;
         const pinName = createText(x + width - 5, rightPinY, pin.name, 'end', 'pin-name', { fill: "var(--tia-gray)" });
         group.appendChild(pinName);
-        const operandText = createText(x + width + 5, rightPinY, pin.operand, 'start', 'operand-text');
+        const operandText = createText(x + width + pin_h_padding, rightPinY, pin.operand, 'start', 'operand-text');
         group.appendChild(operandText);
-        createWire(svg, x + width, rightPinY, x + width + 20, rightPinY);
-        rightPinY += 20;
+        createWire(svg, x + width, rightPinY, x + width + pin_h_padding, rightPinY);
+        rightPinY += pin_v_spacing;
     });
-
     svg.appendChild(group);
 }
 
-function renderSampleNetwork() {
-    const svg = document.getElementById('svg-network-1');
+
+// --- Main Processing Logic ---
+function processAndRender(xmlString) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+
+    // Render Interface
+    const interfaceRoot = xmlDoc.querySelector("Interface");
+    const tbody = document.querySelector("#interface-table tbody");
+    tbody.innerHTML = '';
+    interfaceRoot.querySelectorAll("Section").forEach(section => {
+        const sectionName = section.getAttribute("Name");
+        const members = section.querySelectorAll("Member");
+        if (members.length > 0) {
+            const headerRow = tbody.insertRow();
+            const headerCell = headerRow.insertCell();
+            headerCell.colSpan = 3;
+            headerCell.className = 'section-header';
+            headerCell.textContent = sectionName;
+            members.forEach(member => {
+                const row = tbody.insertRow();
+                row.insertCell().textContent = member.getAttribute("Name");
+                row.insertCell().innerHTML = `<span class="datatype">${member.getAttribute("Datatype")}</span>`;
+                const commentEl = member.querySelector("Comment MultiLanguageText");
+                row.insertCell().innerHTML = `<span class="comment">${commentEl ? '// ' + commentEl.textContent : ''}</span>`;
+            });
+        }
+    });
+
+    // Render Networks
+    const networksContainer = document.querySelector('.networks-container');
+    networksContainer.innerHTML = ''; // Clear existing
+    xmlDoc.querySelectorAll("SW\\.Blocks\\.CompileUnit").forEach((networkXml, index) => {
+        const networkDiv = document.createElement('div');
+        networkDiv.className = 'network';
+
+        const title = `Network ${index + 1}`;
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'network-title';
+        titleDiv.textContent = title;
+        networkDiv.appendChild(titleDiv);
+
+        const svg = document.createElementNS(SVG_NS, "svg");
+        svg.setAttribute('width', '800');
+        svg.setAttribute('height', '200'); // Adjust height dynamically later if needed
+        svg.classList.add('svg-canvas');
+        networkDiv.appendChild(svg);
+        networksContainer.appendChild(networkDiv);
+
+        renderNetwork(svg, networkXml);
+    });
+}
+
+function renderNetwork(svg, networkXml) {
     const RUNG_Y = 80;
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
@@ -252,58 +362,77 @@ function renderSampleNetwork() {
     createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 80);
     createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 80);
 
-    let currentX = LEFT_RAIL_X;
+    const parts = Array.from(networkXml.querySelectorAll("Part"));
+    const accesses = Array.from(networkXml.querySelectorAll("Access"));
+    const wires = Array.from(networkXml.querySelectorAll("Wire"));
 
+    // Simplified rendering logic for this POC
+    let currentX = LEFT_RAIL_X;
     createWire(svg, currentX, RUNG_Y, currentX + 60, RUNG_Y);
     currentX += 60;
 
-    createContact(svg, currentX, RUNG_Y, '"System_Ready"');
-    createWire(svg, currentX - 10, RUNG_Y, currentX - 5, RUNG_Y);
-    currentX += 10;
-    createWire(svg, currentX, RUNG_Y, currentX + 20, RUNG_Y);
-    currentX += 20;
+    if (parts.length === 0) {
+        createWire(svg, LEFT_RAIL_X, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
+        return;
+    }
 
-    const blockPins = [
-        { name: 'IN1', operand: '"Pressure_Sensor"', side: 'left' },
-        { name: 'IN2', operand: '50.0', side: 'left' },
-        { name: 'OUT', operand: '"Pressure_OK"', side: 'right' },
-    ];
-    const blockX = currentX + 20;
-    const blockWidth = 150;
-    const blockHeight = 80;
-    const blockY = RUNG_Y - (blockHeight / 2) + 5;
-    const enPinY = blockY + 22;
+    parts.forEach(part => {
+        const partUid = part.getAttribute("UId");
+        const partName = part.getAttribute("Name");
 
-    createWire(svg, currentX, RUNG_Y, blockX, enPinY);
-    createBlock(svg, blockX, blockY, blockWidth, blockHeight, 'GT_REAL', blockPins);
+        if (partName === 'Contact') {
+            const operandWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="operand"]`));
+            const operandAccessUId = operandWire ? operandWire.querySelector('IdentCon').getAttribute('UId') : '';
+            const operandAccess = accesses.find(a => a.getAttribute('UId') === operandAccessUId);
+            const operand = operandAccess ? `"${operandAccess.querySelector('Component').getAttribute('Name')}"` : '???';
 
-    currentX = blockX + blockWidth;
-    const enoPinX = currentX;
+            createContact(svg, currentX, RUNG_Y, operand);
+            createWire(svg, currentX - 10, RUNG_Y, currentX - 5, RUNG_Y);
+            currentX += 10;
+            createWire(svg, currentX, RUNG_Y, currentX + 20, RUNG_Y);
+            currentX += 20;
 
-    const coilX = enoPinX + 80;
-    createWire(svg, enoPinX, enPinY, coilX, RUNG_Y);
+        } else if (partName === 'RD_SYS_T' || partName === 'Program_Alarm') {
+            const blockPins = [];
+            const blockWires = wires.filter(w => w.querySelector(`NameCon[UId="${partUid}"]`));
 
-    createWire(svg, coilX, RUNG_Y, coilX - 8, RUNG_Y);
-    createCoil(svg, coilX, RUNG_Y, '"Motor_Start"');
+            blockWires.forEach(w => {
+                const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
+                const pinName = nameCon.getAttribute("Name");
+                const identCon = w.querySelector('IdentCon');
+                if (identCon) {
+                    const access = accesses.find(a => a.getAttribute('UId') === identCon.getAttribute('UId'));
+                    if (access) {
+                        const operand = `"${access.querySelector('Component').getAttribute('Name')}"`;
+                        const side = ['en', 'SIG', 'TIMESTAMP'].includes(pinName) ? 'left' : 'right';
+                        blockPins.push({ name: pinName, operand: operand, side: side });
+                    }
+                }
+            });
 
-    createWire(svg, coilX + 8, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
+            const blockX = currentX + 20;
+            const blockWidth = 150;
+            const leftPins = blockPins.filter(p => p.side === 'left').length;
+            const rightPins = blockPins.filter(p => p.side === 'right').length;
+            const blockHeight = 40 + (Math.max(leftPins, rightPins) * 25);
+            const blockY = RUNG_Y - 35;
+            const enPinY = blockY + 22;
+
+            createWire(svg, currentX, RUNG_Y, blockX, RUNG_Y);
+            createWire(svg, blockX, RUNG_Y, blockX, enPinY);
+
+            createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, blockPins);
+
+            const enoPinX = blockX + blockWidth;
+            createWire(svg, enoPinX, enPinY, enoPinX, RUNG_Y);
+            createWire(svg, enoPinX, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
+        }
+    });
 }
 
-function populateSampleInterface() {
-    const tbody = document.querySelector("#interface-table tbody");
-    tbody.innerHTML = `
-        <tr class="section-header"><td colspan="3">Input</td></tr>
-        <tr><td>"System_Ready"</td><td class="datatype">Bool</td><td class="comment">// System is ready for operation.</td></tr>
-        <tr><td>"Pressure_Sensor"</td><td class="datatype">Real</td><td class="comment">// Input from the pressure sensor.</td></tr>
-        <tr class="section-header"><td colspan="3">Output</td></tr>
-        <tr><td>"Motor_Start"</td><td class="datatype">Bool</td><td class="comment">// Command to start the motor.</td></tr>
-        <tr><td>"Pressure_OK"</td><td class="datatype">Bool</td><td class="comment">// Status bit indicating pressure is OK.</td></tr>
-    `;
-}
 
 document.addEventListener('DOMContentLoaded', () => {
-    populateSampleInterface();
-    renderSampleNetwork();
+    processAndRender(boilerAlarmXml);
 });
 </script>
 </body>
