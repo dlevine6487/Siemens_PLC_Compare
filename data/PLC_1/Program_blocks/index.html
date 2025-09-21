@@ -1084,22 +1084,30 @@
 
             const verticalBarX = horizontalOffset + symbolVisualWidth / 2;
             const barSpacing = 8;
+            const barLeftX = verticalBarX - barSpacing / 2;
+            const barRightX = verticalBarX + barSpacing / 2;
 
+            // Draw the two vertical bars
             const bar1 = document.createElementNS(SVG_NS, "line");
-            bar1.setAttribute("x1", verticalBarX - barSpacing / 2);
-            bar1.setAttribute("y1", rungLineY - 10);
-            bar1.setAttribute("x2", verticalBarX - barSpacing / 2);
-            bar1.setAttribute("y2", rungLineY + 10);
+            bar1.setAttribute("x1", barLeftX); bar1.setAttribute("y1", rungLineY - 10);
+            bar1.setAttribute("x2", barLeftX); bar1.setAttribute("y2", rungLineY + 10);
             bar1.classList.add("contact-symbol");
             group.appendChild(bar1);
 
             const bar2 = document.createElementNS(SVG_NS, "line");
-            bar2.setAttribute("x1", verticalBarX + barSpacing / 2);
-            bar2.setAttribute("y1", rungLineY - 10);
-            bar2.setAttribute("x2", verticalBarX + barSpacing / 2);
-            bar2.setAttribute("y2", rungLineY + 10);
+            bar2.setAttribute("x1", barRightX); bar2.setAttribute("y1", rungLineY - 10);
+            bar2.setAttribute("x2", barRightX); bar2.setAttribute("y2", rungLineY + 10);
             bar2.classList.add("contact-symbol");
             group.appendChild(bar2);
+
+            // Draw the horizontal rung segment connecting the two bars
+            const rungSegment = document.createElementNS(SVG_NS, "line");
+            rungSegment.setAttribute("x1", barLeftX);
+            rungSegment.setAttribute("y1", rungLineY);
+            rungSegment.setAttribute("x2", barRightX);
+            rungSegment.setAttribute("y2", rungLineY);
+            rungSegment.classList.add("ladder-wire");
+            group.appendChild(rungSegment);
         }
 
         function renderCoilContent(group, part) {
@@ -1150,7 +1158,6 @@
             let maxRightLabelsWidth = 0;
             let totalInputPinsHeight = 0;
             let totalOutputPinsHeight = 0;
-            let rungConnectionY = 0; // Will store the calculated Y position of the EN pin for alignment
 
             const typeTextWidth = estimateTextDimensions(part.partType, "part-type").width;
 
@@ -1169,30 +1176,17 @@
                 }
             });
 
-            // Second pass: Calculate label widths and find EN pin Y coordinate
-            let currentYInput = headerHeight + IN_BLOCK_PAD_V;
+            // Second pass: Calculate label widths
             part.pins.forEach(pin => {
-                 const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
-                if (isOutput) return; // Only process inputs in this loop
-
-                // The EN/REQ pin defines the main rung connection point for the block
-                if (pin.name === 'EN' || pin.name === 'REQ') {
-                    rungConnectionY = currentYInput + (pin.operandHeight / 2);
-                }
-                const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
-                const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
-                maxLeftLabelsWidth = Math.max(maxLeftLabelsWidth, currentLabelSetWidth);
-
-                currentYInput += pin.operandHeight;
-            });
-             part.pins.forEach(pin => {
                 const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
-                if (!isOutput) return; // Only process outputs
                 const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
                 const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
-                maxRightLabelsWidth = Math.max(maxRightLabelsWidth, currentLabelSetWidth);
+                if (isOutput) {
+                    maxRightLabelsWidth = Math.max(maxRightLabelsWidth, currentLabelSetWidth);
+                } else {
+                    maxLeftLabelsWidth = Math.max(maxLeftLabelsWidth, currentLabelSetWidth);
+                }
             });
-
 
             part.blockInternalRectWidth = Math.max(MIN_BLOCK_RECT_WIDTH, typeTextWidth + IN_BLOCK_PAD_H * 2);
             part.calculatedWidth = maxLeftLabelsWidth + part.blockInternalRectWidth + maxRightLabelsWidth;
@@ -1201,8 +1195,9 @@
             part.maxLeftLabelsWidth = maxLeftLabelsWidth;
             part.maxRightLabelsWidth = maxRightLabelsWidth;
             part.instructionTypeHeight = INSTRUCTION_TYPE_HEIGHT;
-            // Store the universal connection point. Fallback to geometric center if no EN pin.
-            part.rungConnectionY = rungConnectionY || (part.calculatedHeight / 2);
+
+            // Per user feedback, the rung must align with the bottom of the header.
+            part.rungConnectionY = headerHeight;
         }
 
 
