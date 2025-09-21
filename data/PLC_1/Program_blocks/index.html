@@ -685,7 +685,7 @@
                 const networkComment = getMultilingualTextContent(attrList, "Comment");
 
                 const network = new Network(networkCounter, networkTitle, networkComment);
-                console.log(`--- Parsing Network ${network.number}: Title='${network.title}' ---`);
+                console.log(`--- Parsing Network ${network.number}: Title='${network.title}', Comment='${network.comment}' ---`);
                 // Title and comment can be legitimately empty, so a simple log is better than an assertion.
                 console.assert(attrList, `Assertion Failed: Could not find AttributeList for CompileUnit of Network ${network.number}.`);
 
@@ -1002,9 +1002,9 @@
         function renderPartGraphic(part, x, y) { // y is the RUNG_Y
             const group = document.createElementNS(SVG_NS, "g");
 
-            // For contacts/coils, we center them on the rung.
-            // For instruction blocks, we align the block so its EN pin's Y-coordinate matches the rung's Y.
-            const yOffset = /Contact|Coil/.test(part.partType) ? (part.calculatedHeight / 2) : (part.enPinY || part.calculatedHeight / 2);
+            // Use the universal rungConnectionY property to align all parts to the main rung.
+            // Fallback to centering the part if the property doesn't exist for some reason.
+            const yOffset = part.rungConnectionY || (part.calculatedHeight / 2);
             group.setAttribute("transform", `translate(${x}, ${y - yOffset})`);
 
             if (part.partType === 'Contact') {
@@ -1041,38 +1041,36 @@
                 operandTextHeight = opPin.operandHeight;
             }
             
-            // Part's total width must be at least the visual width of the symbol, or wider for long operand text
             part.calculatedWidth = Math.max(MIN_CONTACT_COIL_VISUAL_WIDTH, operandTextWidth + IN_BLOCK_PAD_H * 2);
             
-            // Calculated height includes the fixed symbol height (20px) + space for operand text above it + padding
-            part.calculatedHeight = 20; 
-            if (opPin) {
-                part.calculatedHeight += (operandTextHeight + IN_BLOCK_PAD_V); // Add operand height + padding above symbol
-            } else {
-                part.calculatedHeight += IN_BLOCK_PAD_V; // Just some padding if no operand
-            }
+            const operandTextVerticalSpace = opPin ? (opPin.operandHeight + IN_BLOCK_PAD_V) : IN_BLOCK_PAD_V;
+            const symbolHeight = 20; // The fixed height of the contact/coil symbol itself
+            part.calculatedHeight = symbolHeight + operandTextVerticalSpace;
+
+            // The rung connects to the vertical center of the symbol, which is below the operand text.
+            part.rungConnectionY = operandTextVerticalSpace + (symbolHeight / 2);
         }
 
         function renderContactContent(group, part) {
-            const symbolVisualWidth = MIN_CONTACT_COIL_VISUAL_WIDTH; 
+            const symbolVisualWidth = MIN_CONTACT_COIL_VISUAL_WIDTH;
             const totalPartWidth = part.calculatedWidth;
-            const horizontalOffset = (totalPartWidth - symbolVisualWidth) / 2; // Offset to center fixed-width symbol visually
+            const horizontalOffset = (totalPartWidth - symbolVisualWidth) / 2;
 
             const op = part.pins.find(pn => pn.name === 'operand');
-            let operandTextVerticalSpace = 0; // Space taken by operand text (height + padding)
+            let operandTextVerticalSpace = 0;
 
             if (op) {
                 operandTextVerticalSpace = op.operandHeight + IN_BLOCK_PAD_V;
                 const t = document.createElementNS(SVG_NS, "text");
-                t.setAttribute("x", totalPartWidth / 2); 
-                t.setAttribute("y", op.operandHeight / 2); 
+                t.setAttribute("x", totalPartWidth / 2);
+                t.setAttribute("y", op.operandHeight / 2);
                 t.setAttribute("dominant-baseline", "middle");
                 t.setAttribute("text-anchor", "middle");
                 t.classList.add("contact-operand");
                 op.wrappedOperand.forEach((line, index) => {
                     const tspan = document.createElementNS(SVG_NS, "tspan");
                     tspan.textContent = line;
-                    tspan.setAttribute("x", totalPartWidth / 2); 
+                    tspan.setAttribute("x", totalPartWidth / 2);
                     tspan.setAttribute("dy", index === 0 ? 0 : PIN_LINE_HEIGHT);
                     t.appendChild(tspan);
                 });
@@ -1081,44 +1079,49 @@
                 operandTextVerticalSpace = IN_BLOCK_PAD_V;
             }
 
+            // Use the pre-calculated rungConnectionY for perfect alignment.
+            const rungLineY = part.rungConnectionY;
 
-            // Contact symbol: two vertical lines centered within symbolVisualWidth
-            const rungLineY = operandTextVerticalSpace + (part.calculatedHeight - operandTextVerticalSpace) / 2; // Vertical center of the symbol's area
-
-            const verticalBarX = horizontalOffset + symbolVisualWidth / 2; // Center of the two bars
-            const barSpacing = 8; // Spacing between the two vertical bars
+            const verticalBarX = horizontalOffset + symbolVisualWidth / 2;
+            const barSpacing = 8;
 
             const bar1 = document.createElementNS(SVG_NS, "line");
-            bar1.setAttribute("x1", verticalBarX - barSpacing/2); bar1.setAttribute("y1", rungLineY - 10);
-            bar1.setAttribute("x2", verticalBarX - barSpacing/2); bar1.setAttribute("y2", rungLineY + 10);
-            bar1.classList.add("contact-symbol"); group.appendChild(bar1);
+            bar1.setAttribute("x1", verticalBarX - barSpacing / 2);
+            bar1.setAttribute("y1", rungLineY - 10);
+            bar1.setAttribute("x2", verticalBarX - barSpacing / 2);
+            bar1.setAttribute("y2", rungLineY + 10);
+            bar1.classList.add("contact-symbol");
+            group.appendChild(bar1);
 
             const bar2 = document.createElementNS(SVG_NS, "line");
-            bar2.setAttribute("x1", verticalBarX + barSpacing/2); bar2.setAttribute("y1", rungLineY - 10);
-            bar2.setAttribute("x2", verticalBarX + barSpacing/2); bar2.setAttribute("y2", rungLineY + 10);
-            bar2.classList.add("contact-symbol"); group.appendChild(bar2);
+            bar2.setAttribute("x1", verticalBarX + barSpacing / 2);
+            bar2.setAttribute("y1", rungLineY - 10);
+            bar2.setAttribute("x2", verticalBarX + barSpacing / 2);
+            bar2.setAttribute("y2", rungLineY + 10);
+            bar2.classList.add("contact-symbol");
+            group.appendChild(bar2);
         }
 
         function renderCoilContent(group, part) {
-            const symbolVisualWidth = MIN_CONTACT_COIL_VISUAL_WIDTH; 
-            const totalPartWidth = part.calculatedWidth; 
-            const horizontalOffset = (totalPartWidth - symbolVisualWidth) / 2; 
+            const symbolVisualWidth = MIN_CONTACT_COIL_VISUAL_WIDTH;
+            const totalPartWidth = part.calculatedWidth;
+            const horizontalOffset = (totalPartWidth - symbolVisualWidth) / 2;
 
             const op = part.pins.find(pn => pn.name === 'operand');
-            let operandTextVerticalSpace = 0; 
+            let operandTextVerticalSpace = 0;
 
             if (op) {
                 operandTextVerticalSpace = op.operandHeight + IN_BLOCK_PAD_V;
                 const t = document.createElementNS(SVG_NS, "text");
-                t.setAttribute("x", totalPartWidth / 2); 
-                t.setAttribute("y", op.operandHeight / 2); 
+                t.setAttribute("x", totalPartWidth / 2);
+                t.setAttribute("y", op.operandHeight / 2);
                 t.setAttribute("dominant-baseline", "middle");
                 t.setAttribute("text-anchor", "middle");
                 t.classList.add("coil-operand");
                 op.wrappedOperand.forEach((line, index) => {
                     const tspan = document.createElementNS(SVG_NS, "tspan");
                     tspan.textContent = line;
-                    tspan.setAttribute("x", totalPartWidth / 2); 
+                    tspan.setAttribute("x", totalPartWidth / 2);
                     tspan.setAttribute("dy", index === 0 ? 0 : PIN_LINE_HEIGHT);
                     t.appendChild(tspan);
                 });
@@ -1127,14 +1130,15 @@
                 operandTextVerticalSpace = IN_BLOCK_PAD_V;
             }
 
-            // Coil symbol (circle)
-            const symbolCenterY = operandTextVerticalSpace + (part.calculatedHeight - operandTextVerticalSpace) / 2; // Vertical center of the symbol's area
+            // Use the pre-calculated rungConnectionY for perfect alignment.
+            const symbolCenterY = part.rungConnectionY;
 
             const circle = document.createElementNS(SVG_NS, "circle");
-            circle.setAttribute("cx", horizontalOffset + symbolVisualWidth / 2); 
-            circle.setAttribute("cy", symbolCenterY); 
+            circle.setAttribute("cx", horizontalOffset + symbolVisualWidth / 2);
+            circle.setAttribute("cy", symbolCenterY);
             circle.setAttribute("r", 10); // Radius
-            circle.classList.add("coil-symbol"); group.appendChild(circle);
+            circle.classList.add("coil-symbol");
+            group.appendChild(circle);
         }
 
         // Function to calculate dimensions of an instruction block including wrapped text
@@ -1146,7 +1150,7 @@
             let maxRightLabelsWidth = 0;
             let totalInputPinsHeight = 0;
             let totalOutputPinsHeight = 0;
-            let enPinY = 0; // Will store the calculated Y position of the EN pin for alignment
+            let rungConnectionY = 0; // Will store the calculated Y position of the EN pin for alignment
 
             const typeTextWidth = estimateTextDimensions(part.partType, "part-type").width;
 
@@ -1171,8 +1175,9 @@
                  const isOutput = /^(Q|ET|OUT|RET_VAL|ENO|ERROR|STATUS|LONG_OUT_PIN)$/.test(pin.name);
                 if (isOutput) return; // Only process inputs in this loop
 
-                if (pin.name === 'EN' || pin.name === 'REQ') { // Treat REQ like EN for alignment
-                    enPinY = currentYInput + (pin.operandHeight / 2);
+                // The EN/REQ pin defines the main rung connection point for the block
+                if (pin.name === 'EN' || pin.name === 'REQ') {
+                    rungConnectionY = currentYInput + (pin.operandHeight / 2);
                 }
                 const pinNameWidth = estimateTextDimensions(pin.name, "pin-name").width;
                 const currentLabelSetWidth = pinNameWidth + PIN_ELEMENT_GAP_H + PIN_TERMINAL_WIRE_LENGTH + (PIN_TERMINAL_SIZE * 2) + PIN_ELEMENT_GAP_H + pin.operandWidth;
@@ -1196,7 +1201,8 @@
             part.maxLeftLabelsWidth = maxLeftLabelsWidth;
             part.maxRightLabelsWidth = maxRightLabelsWidth;
             part.instructionTypeHeight = INSTRUCTION_TYPE_HEIGHT;
-            part.enPinY = enPinY || (part.calculatedHeight / 2); // Fallback to center if no EN pin found
+            // Store the universal connection point. Fallback to geometric center if no EN pin.
+            part.rungConnectionY = rungConnectionY || (part.calculatedHeight / 2);
         }
 
 
