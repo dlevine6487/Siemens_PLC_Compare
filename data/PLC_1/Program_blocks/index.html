@@ -283,9 +283,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
 
-    // Re-initialize pin Y positions for each side
-    let leftPinY = y + pin_v_spacing;
-    let rightPinY = y + pin_v_spacing;
+    let leftPinY = y + headerHeight + pin_v_spacing;
+    let rightPinY = y + headerHeight + pin_v_spacing;
 
     pins.forEach(pin => {
         const isLeft = pin.side === 'left';
@@ -298,7 +297,6 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
 
         const operandX = isLeft ? x - pin_h_padding : x + width + pin_h_padding;
         const operandAnchor = isLeft ? 'end' : 'start';
-        // Only render operand if it's not '???'
         if (pin.operand !== '???') {
             const operandText = createText(operandX, pinY, pin.operand, operandAnchor, 'operand-text');
             group.appendChild(operandText);
@@ -374,14 +372,17 @@ function processAndRender(xmlString) {
 function getOperand(wire, accesses, interfaceTags) {
     if (!wire) return '???';
     const identCon = wire.querySelector('IdentCon');
-    if (!identCon) return '???'; // This is correct for wires from power rail
+    if (!identCon) return '???';
 
     const access = accesses.find(a => a.getAttribute('UId') === identCon.getAttribute('UId'));
     if (access) {
         const component = access.querySelector('Component');
         if (component) {
             const tagName = component.getAttribute('Name').trim();
-            return interfaceTags.has(tagName) ? `#"${tagName}"` : `"${tagName}"`;
+            if (interfaceTags.has(tagName)) {
+                return `#"${tagName}"`;
+            }
+            return `"${tagName}"`;
         }
     }
     return '???';
@@ -427,17 +428,12 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             const instanceEl = part.querySelector("Instance Component");
             const instanceName = instanceEl ? `"${instanceEl.getAttribute("Name")}"` : null;
 
-            const INPUT_PINS = ['en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
-
-            // Manually add EN/ENO to the pins list from the main rung connection
-            blockPins.push({ name: 'EN', operand: getOperand(wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="en"]`)), accesses, interfaceTags), side: 'left'});
-            blockPins.push({ name: 'ENO', operand: '???', side: 'right'}); // ENO is rarely wired explicitly
+            const INPUT_PINS = ['SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
 
             blockWires.forEach(w => {
                 const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
                 const pinName = nameCon.getAttribute("Name");
-                // Skip EN/ENO as we handled them manually
-                if (pinName === 'en' || pinName === 'eno') return;
+                if (pinName === 'en' || pinName === 'eno') return; // Implicit EN/ENO
                 const operand = getOperand(w, accesses, interfaceTags);
                 const side = INPUT_PINS.includes(pinName) ? 'left' : 'right';
                 blockPins.push({ name: pinName.toUpperCase(), operand: operand, side: side });
@@ -445,26 +441,22 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
             const blockX = currentX + 30;
             const blockWidth = 150;
-            const yOffset = instanceName ? 25 : 0;
+            const yOffset = instanceName ? 20 : 0;
             const leftPins = blockPins.filter(p => p.side === 'left').length;
             const rightPins = blockPins.filter(p => p.side === 'right').length;
-            const blockHeight = 10 + (Math.max(leftPins, rightPins) * 22);
+            const blockHeight = 30 + (Math.max(leftPins, rightPins) * 22);
             const blockY = RUNG_Y - (blockHeight / 2) - yOffset;
+            const enPinY = blockY + 22;
 
-            const enPinData = blockPins.find(p => p.name === 'EN');
-            const enPinY = blockY + (blockPins.filter(p=>p.side==='left').indexOf(enPinData) * 22) + 11;
-
-            const enoPinData = blockPins.find(p => p.name === 'ENO');
-            const enoPinY = blockY + (blockPins.filter(p=>p.side==='right').indexOf(enoPinData) * 22) + 11;
-
-            createWire(svg, currentX, RUNG_Y, blockX - 25, RUNG_Y);
-            createWire(svg, blockX - 25, RUNG_Y, blockX - 25, enPinY);
+            createWire(svg, currentX, RUNG_Y, blockX, enPinY);
+            createWire(svg, blockX, enPinY, blockX, RUNG_Y); // vertical wire to rung
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, blockPins);
 
             const enoPinX = blockX + blockWidth;
-            createWire(svg, enoPinX + 25, enoPinY, enoPinX + 25, RUNG_Y);
-            createWire(svg, enoPinX + 25, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
+            createWire(svg, enoPinX, enPinY, enoPinX + 20, enPinY);
+            createWire(svg, enoPinX + 20, enPinY, enoPinX + 20, RUNG_Y);
+            createWire(svg, enoPinX + 20, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
         }
     });
 }
