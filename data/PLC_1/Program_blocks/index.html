@@ -9,6 +9,7 @@
             --tia-bg: #EBEBEB;
             --tia-grid-bg: #FFFFFF;
             --tia-blue: #007ACC;
+            --tia-light-blue: #DCEAF6;
             --tia-green: #008800;
             --tia-purple: #6A0DAD;
             --tia-gray: #555555;
@@ -201,7 +202,6 @@ function createWire(svg, x1, y1, x2, y2) {
 function createContact(svg, cx, cy, operand) {
     const group = document.createElementNS(SVG_NS, "g");
     const style = { stroke: "var(--wire-color)", strokeWidth: "var(--wire-thickness)" };
-    createWire(svg, cx - 20, cy, cx - 5, cy);
     const bar1 = document.createElementNS(SVG_NS, "line");
     bar1.setAttribute("x1", cx - 5); bar1.setAttribute("y1", cy - 10);
     bar1.setAttribute("x2", cx - 5); bar1.setAttribute("y2", cy + 10);
@@ -224,7 +224,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const pin_v_spacing = 25;
 
     if (instanceName) {
-        const instanceText = createText(x + width / 2, y - 12, instanceName, 'middle', 'instance-text', {fontSize: '11px', fill: 'var(--tia-gray)'});
+        const instanceTextStyle = { fontSize: '11px', fill: 'var(--tia-gray)' };
+        const instanceText = createText(x + width / 2, y - 12, instanceName, 'middle', 'instance-text', instanceTextStyle);
         group.appendChild(instanceText);
     }
 
@@ -244,8 +245,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
 
-    let leftPinY = y + pin_v_spacing;
-    let rightPinY = y + pin_v_spacing;
+    let leftPinY = y + headerHeight + pin_v_spacing;
+    let rightPinY = y + headerHeight + pin_v_spacing;
 
     pins.forEach(pin => {
         const isLeft = pin.side === 'left';
@@ -253,7 +254,7 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
 
         const pinNameX = isLeft ? x + pin_h_padding : x + width - pin_h_padding;
         const pinNameAnchor = isLeft ? 'start' : 'end';
-        const pinNameStyle = { fontWeight: '500', fill: '#333' };
+        const pinNameStyle = { fontWeight: '500', fill: 'var(--tia-gray)' }; // Lighter text color for pins
         const pinName = createText(pinNameX, pinY, pin.name, pinNameAnchor, 'pin-name', pinNameStyle);
         group.appendChild(pinName);
 
@@ -365,16 +366,18 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
             const blockX = currentX;
             const blockWidth = 150;
-            const blockHeight = 22 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING) + 10;
-            const blockY = RUNG_Y - (PIN_V_SPACING + 11);
+            const yOffset = instanceName ? 30 : 15;
+            const headerHeight = 22;
+            const blockHeight = headerHeight + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING) + 10;
+            const blockY = RUNG_Y - (headerHeight + PIN_V_SPACING);
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, sortedPins);
 
-            createWire(svg, rungStartX, RUNG_Y, blockX, RUNG_Y);
+            const enPinY = RUNG_Y;
+            createWire(svg, rungStartX, RUNG_Y, blockX, enPinY);
 
             const enoPinData = sortedPins.find(p => p.name === 'ENO');
             if (enoPinData) {
-                const enoPinY = RUNG_Y;
                 const enoPinX = blockX + blockWidth;
                 rungStartX = enoPinX;
             }
