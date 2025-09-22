@@ -297,6 +297,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
     const H_SPACING = 40;
+    const PIN_V_SPACING = 22;
 
     createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 100);
     createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 100);
@@ -357,33 +358,27 @@ function renderNetwork(svg, networkXml, interfaceTags) {
                 blockPins.push({ name: pinName.toUpperCase(), operand: operand, side: side });
             });
 
-            blockPins.sort((a,b) => {
-                const aIsEn = a.name === 'EN';
-                const bIsEn = b.name === 'EN';
-                if (aIsEn && !bIsEn) return -1;
-                if (!aIsEn && bIsEn) return 1;
-                return a.name.localeCompare(b.name);
-            });
+            const leftPins = blockPins.filter(p => p.side === 'left').sort((a,b) => (a.name === 'EN' ? -1 : b.name === 'EN' ? 1 : a.name.localeCompare(b.name)));
+            const rightPins = blockPins.filter(p => p.side === 'right').sort((a,b) => (a.name === 'ENO' ? -1 : b.name === 'ENO' ? 1 : a.name.localeCompare(b.name)));
+            const sortedPins = [...leftPins, ...rightPins];
 
             const blockX = currentX;
             const blockWidth = 150;
             const yOffset = instanceName ? 30 : 15;
-            const leftPins = blockPins.filter(p => p.side === 'left');
-            const rightPins = blockPins.filter(p => p.side === 'right');
-            const blockHeight = 10 + (Math.max(leftPins.length, rightPins.length) * 22);
+            const blockHeight = 10 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING);
+            const enPinData = sortedPins.find(p => p.name === 'EN');
+            const enPinIndex = enPinData ? leftPins.indexOf(enPinData) : -1;
+            const enPinY = RUNG_Y;
+            const blockY = enPinY - (PIN_V_SPACING * (enPinIndex + 1));
 
-            const enPinData = blockPins.find(p => p.name === 'EN');
-            const enPinIndex = enPinData ? leftPins.indexOf(enPinData) : 0;
-            const enPinOffsetY = (enPinIndex * 22) + 11;
-            const blockY = RUNG_Y - enPinOffsetY - yOffset;
+            createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, sortedPins);
 
-            createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, blockPins);
+            createWire(svg, currentX - H_SPACING, RUNG_Y, blockX - 25 - 5, enPinY);
 
-            createWire(svg, currentX - H_SPACING, RUNG_Y, blockX, RUNG_Y);
-
-            const enoPinData = blockPins.find(p => p.name === 'ENO');
+            const enoPinData = sortedPins.find(p => p.name === 'ENO');
             if (enoPinData) {
-                const enoPinY = blockY + (rightPins.indexOf(enoPinData) * 22) + 11;
+                const enoPinIndex = rightPins.indexOf(enoPinData);
+                const enoPinY = blockY + (enoPinIndex * PIN_V_SPACING) + PIN_V_SPACING;
                 const enoPinX = blockX + blockWidth;
                 createWire(svg, enoPinX, enoPinY, RIGHT_RAIL_X, enoPinY);
             }
