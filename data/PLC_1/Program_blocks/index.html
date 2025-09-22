@@ -243,8 +243,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
 
-    let leftPinY = y + headerHeight + pin_v_spacing;
-    let rightPinY = y + headerHeight + pin_v_spacing;
+    let leftPinY = y + pin_v_spacing;
+    let rightPinY = y + pin_v_spacing;
 
     pins.forEach(pin => {
         const isLeft = pin.side === 'left';
@@ -260,6 +260,9 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
         if (pin.operand !== '???') {
             const operandText = createText(operandX, pinY, pin.operand, operandAnchor, 'operand-text');
             group.appendChild(operandText);
+            const wireStartX = isLeft ? operandX + getTextWidth(pin.operand) : pinNameX - getTextWidth(pin.name) - 5;
+            const wireEndX = isLeft ? x : x + width;
+            createWire(svg, wireStartX, pinY, wireEndX, pinY);
         }
 
         if (isLeft) leftPinY += pin_v_spacing;
@@ -328,16 +331,17 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
     let currentX = LEFT_RAIL_X + H_SPACING + maxLeftOperandWidth;
 
+    createWire(svg, LEFT_RAIL_X, RUNG_Y, currentX, RUNG_Y);
+
     parts.forEach(part => {
         const partUid = part.getAttribute("UId");
         const partName = part.getAttribute("Name");
 
         if (partName === 'Contact') {
-            createWire(svg, currentX - H_SPACING, RUNG_Y, currentX - 5, RUNG_Y);
             const operandWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="operand"]`));
             const operand = getOperand(operandWire, accesses, interfaceTags);
             createContact(svg, currentX, RUNG_Y, operand);
-            createWire(svg, currentX + 5, RUNG_Y, currentX + H_SPACING, RUNG_Y);
+            createWire(svg, currentX - 5, RUNG_Y, currentX + 5, RUNG_Y); // This line was missing, causing the break
             currentX += H_SPACING;
         } else if (partName === 'RD_SYS_T' || partName === 'Program_Alarm') {
             const blockPins = [];
@@ -361,22 +365,21 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
             const blockX = currentX;
             const blockWidth = 150;
-            const yOffset = instanceName ? 30 : 15;
             const blockHeight = 22 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING) + 10;
-            const blockY = RUNG_Y - (PIN_V_SPACING + 22); // Align top pin with rung
+            const blockY = RUNG_Y - (PIN_V_SPACING + 11);
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, sortedPins);
 
-            createWire(svg, currentX - H_SPACING, RUNG_Y, blockX, RUNG_Y);
-
             const enoPinData = sortedPins.find(p => p.name === 'ENO');
             if (enoPinData) {
-                const enoPinY = RUNG_Y;
                 const enoPinX = blockX + blockWidth;
-                createWire(svg, enoPinX, enoPinY, RIGHT_RAIL_X, enoPinY);
+                createWire(svg, enoPinX, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
             }
+            currentX += blockWidth;
         }
     });
+
+    createWire(svg, currentX, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
 }
 
 function processAndRender(xmlString) {
