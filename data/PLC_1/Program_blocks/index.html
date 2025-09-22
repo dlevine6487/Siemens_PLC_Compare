@@ -220,7 +220,7 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const group = document.createElementNS(SVG_NS, "g");
     const headerHeight = 22;
     const pin_h_padding = 5;
-    const pin_v_spacing = 22;
+    const pin_v_spacing = 25; // Increased spacing for readability
 
     if (instanceName) {
         const instanceText = createText(x + width / 2, y - 12, instanceName, 'middle', 'instance-text');
@@ -243,8 +243,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
 
-    let leftPinY = y + pin_v_spacing;
-    let rightPinY = y + pin_v_spacing;
+    let leftPinY = y + headerHeight + pin_v_spacing;
+    let rightPinY = y + headerHeight + pin_v_spacing;
 
     pins.forEach(pin => {
         const isLeft = pin.side === 'left';
@@ -261,10 +261,6 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
             const operandText = createText(operandX, pinY, pin.operand, operandAnchor, 'operand-text');
             group.appendChild(operandText);
         }
-
-        const wireStartX = isLeft ? x - pin_h_padding - 5 : x + width;
-        const wireEndX = isLeft ? x : x + width + pin_h_padding + 5;
-        createWire(svg, wireStartX, pinY, wireEndX, pinY);
 
         if (isLeft) leftPinY += pin_v_spacing;
         else rightPinY += pin_v_spacing;
@@ -297,7 +293,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
     const H_SPACING = 40;
-    const PIN_V_SPACING = 22;
+    const PIN_V_SPACING = 25;
 
     createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 100);
     createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 100);
@@ -358,29 +354,25 @@ function renderNetwork(svg, networkXml, interfaceTags) {
                 blockPins.push({ name: pinName.toUpperCase(), operand: operand, side: side });
             });
 
-            const leftPins = blockPins.filter(p => p.side === 'left').sort((a,b) => (a.name === 'EN' ? -1 : b.name === 'EN' ? 1 : a.name.localeCompare(b.name)));
-            const rightPins = blockPins.filter(p => p.side === 'right').sort((a,b) => (a.name === 'ENO' ? -1 : b.name === 'ENO' ? 1 : a.name.localeCompare(b.name)));
+            const leftPins = blockPins.filter(p => p.side === 'left').sort((a, b) => (a.name === 'EN' ? -1 : b.name === 'EN' ? 1 : a.name.localeCompare(b.name)));
+            const rightPins = blockPins.filter(p => p.side === 'right').sort((a, b) => (a.name === 'ENO' ? -1 : b.name === 'ENO' ? 1 : a.name.localeCompare(b.name)));
             const sortedPins = [...leftPins, ...rightPins];
 
             const blockX = currentX;
             const blockWidth = 150;
             const yOffset = instanceName ? 30 : 15;
-            const blockHeight = 10 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING);
-            const enPinData = sortedPins.find(p => p.name === 'EN');
-            const enPinIndex = enPinData ? leftPins.indexOf(enPinData) : -1;
-            const enPinY = RUNG_Y;
-            const blockY = enPinY - (PIN_V_SPACING * (enPinIndex + 1));
+            const blockHeight = 20 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING);
+            const blockY = RUNG_Y - PIN_V_SPACING - yOffset;
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, sortedPins);
 
-            createWire(svg, currentX - H_SPACING, RUNG_Y, blockX - 25 - 5, enPinY);
+            const enPinY = RUNG_Y;
+            createWire(svg, currentX - H_SPACING, RUNG_Y, blockX, enPinY);
 
             const enoPinData = sortedPins.find(p => p.name === 'ENO');
             if (enoPinData) {
-                const enoPinIndex = rightPins.indexOf(enoPinData);
-                const enoPinY = blockY + (enoPinIndex * PIN_V_SPACING) + PIN_V_SPACING;
                 const enoPinX = blockX + blockWidth;
-                createWire(svg, enoPinX, enoPinY, RIGHT_RAIL_X, enoPinY);
+                createWire(svg, enoPinX, enPinY, RIGHT_RAIL_X, enPinY);
             }
         }
     });
