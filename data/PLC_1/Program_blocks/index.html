@@ -166,6 +166,15 @@ const boilerAlarmXml = `<?xml version="1.0" encoding="utf-8"?>
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+let measureContext;
+function getTextWidth(text, font) {
+    if (!measureContext) {
+        measureContext = document.createElement("canvas").getContext("2d");
+    }
+    measureContext.font = font || '12px var(--font-family)';
+    return measureContext.measureText(text).width;
+}
+
 function createText(x, y, text, anchor, cssClass, style = {}) {
     const textEl = document.createElementNS(SVG_NS, "text");
     textEl.setAttribute("x", x);
@@ -210,7 +219,7 @@ function createContact(svg, cx, cy, operand) {
 function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const group = document.createElementNS(SVG_NS, "g");
     const headerHeight = 22;
-    const pin_h_padding = 25;
+    const pin_h_padding = 5;
     const pin_v_spacing = 22;
 
     if (instanceName) {
@@ -241,20 +250,20 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
         const isLeft = pin.side === 'left';
         const pinY = isLeft ? leftPinY : rightPinY;
 
-        const pinNameX = isLeft ? x + 8 : x + width - 8;
+        const pinNameX = isLeft ? x + pin_h_padding : x + width - pin_h_padding;
         const pinNameAnchor = isLeft ? 'start' : 'end';
         const pinName = createText(pinNameX, pinY, pin.name, pinNameAnchor, 'pin-name', { fill: "var(--tia-gray)" });
         group.appendChild(pinName);
 
-        const operandX = isLeft ? x - pin_h_padding : x + width + pin_h_padding;
+        const operandX = isLeft ? x - pin_h_padding - 5 : x + width + pin_h_padding + 5;
         const operandAnchor = isLeft ? 'end' : 'start';
         if (pin.operand !== '???') {
             const operandText = createText(operandX, pinY, pin.operand, operandAnchor, 'operand-text');
             group.appendChild(operandText);
         }
 
-        const wireStartX = isLeft ? x - pin_h_padding : x + width;
-        const wireEndX = isLeft ? x : x + width + pin_h_padding;
+        const wireStartX = isLeft ? x - pin_h_padding - 5 : x + width;
+        const wireEndX = isLeft ? x : x + width + pin_h_padding + 5;
         createWire(svg, wireStartX, pinY, wireEndX, pinY);
 
         if (isLeft) leftPinY += pin_v_spacing;
@@ -287,6 +296,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
     const RUNG_Y = 110;
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
+    const H_SPACING = 40;
 
     createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 100);
     createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 100);
@@ -295,29 +305,42 @@ function renderNetwork(svg, networkXml, interfaceTags) {
     const accesses = Array.from(networkXml.querySelectorAll("Access"));
     const wires = Array.from(networkXml.querySelectorAll("Wire"));
 
-    let currentX = LEFT_RAIL_X;
-
     if (parts.length === 0) {
         createWire(svg, LEFT_RAIL_X, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
         return;
     }
 
-    createWire(svg, currentX, RUNG_Y, currentX + 60, RUNG_Y);
-    currentX += 60;
+    let maxLeftOperandWidth = 0;
+    parts.forEach(part => {
+        if (part.getAttribute("Name") !== 'Contact') {
+            const partUid = part.getAttribute("UId");
+            const blockWires = wires.filter(w => w.querySelector(`NameCon[UId="${partUid}"]`));
+            const INPUT_PINS = ['en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
+            blockWires.forEach(w => {
+                 const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
+                 const pinName = nameCon.getAttribute("Name");
+                 if(INPUT_PINS.includes(pinName)) {
+                    const operand = getOperand(w, accesses, interfaceTags);
+                    if(operand !== '???') {
+                        maxLeftOperandWidth = Math.max(maxLeftOperandWidth, getTextWidth(operand));
+                    }
+                 }
+            });
+        }
+    });
+
+    let currentX = LEFT_RAIL_X + H_SPACING + maxLeftOperandWidth;
 
     parts.forEach(part => {
         const partUid = part.getAttribute("UId");
         const partName = part.getAttribute("Name");
 
         if (partName === 'Contact') {
+            createWire(svg, currentX - H_SPACING, RUNG_Y, currentX, RUNG_Y);
             const operandWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="operand"]`));
             const operand = getOperand(operandWire, accesses, interfaceTags);
             createContact(svg, currentX, RUNG_Y, operand);
-            const outWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="out"]`));
-            if (outWire) {
-                 createWire(svg, currentX + 5, RUNG_Y, currentX + 40, RUNG_Y);
-                 currentX += 40;
-            }
+            currentX += H_SPACING;
         } else if (partName === 'RD_SYS_T' || partName === 'Program_Alarm') {
             const blockPins = [];
             const blockWires = wires.filter(w => w.querySelector(`NameCon[UId="${partUid}"]`));
@@ -335,36 +358,34 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             });
 
             blockPins.sort((a,b) => {
-                if(a.name === 'EN') return -1;
-                if(b.name === 'EN') return 1;
-                if(a.name === 'ENO') return 1;
-                if(b.name === 'ENO') return -1;
+                const aIsEn = a.name === 'EN';
+                const bIsEn = b.name === 'EN';
+                if (aIsEn && !bIsEn) return -1;
+                if (!aIsEn && bIsEn) return 1;
                 return a.name.localeCompare(b.name);
             });
 
             const blockX = currentX;
             const blockWidth = 150;
             const yOffset = instanceName ? 30 : 15;
-            const leftPins = blockPins.filter(p => p.side === 'left').length;
-            const rightPins = blockPins.filter(p => p.side === 'right').length;
-            const blockHeight = 10 + (Math.max(leftPins, rightPins) * 22);
-            const blockY = RUNG_Y - yOffset - (blockHeight/2);
+            const leftPins = blockPins.filter(p => p.side === 'left');
+            const rightPins = blockPins.filter(p => p.side === 'right');
+            const blockHeight = 10 + (Math.max(leftPins.length, rightPins.length) * 22);
+
+            const enPinData = blockPins.find(p => p.name === 'EN');
+            const enPinIndex = enPinData ? leftPins.indexOf(enPinData) : 0;
+            const enPinOffsetY = (enPinIndex * 22) + 11;
+            const blockY = RUNG_Y - enPinOffsetY - yOffset;
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, blockPins);
 
-            const enPinData = blockPins.find(p => p.name === 'EN');
-            if (enPinData) {
-                const enPinY = blockY + (blockPins.filter(p=>p.side==='left').indexOf(enPinData) * 22) + 11;
-                createWire(svg, currentX - 40, RUNG_Y, blockX - 25, RUNG_Y);
-                createWire(svg, blockX - 25, RUNG_Y, blockX - 25, enPinY);
-            }
+            createWire(svg, currentX - H_SPACING, RUNG_Y, blockX, RUNG_Y);
 
             const enoPinData = blockPins.find(p => p.name === 'ENO');
             if (enoPinData) {
-                const enoPinY = blockY + (blockPins.filter(p=>p.side==='right').indexOf(enoPinData) * 22) + 11;
+                const enoPinY = blockY + (rightPins.indexOf(enoPinData) * 22) + 11;
                 const enoPinX = blockX + blockWidth;
-                createWire(svg, enoPinX + 25, enoPinY, enoPinX + 25, RUNG_Y);
-                createWire(svg, enoPinX + 25, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
+                createWire(svg, enoPinX, enoPinY, RIGHT_RAIL_X, enoPinY);
             }
         }
     });
