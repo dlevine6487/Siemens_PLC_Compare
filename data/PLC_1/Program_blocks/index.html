@@ -9,6 +9,7 @@
             --tia-bg: #EBEBEB;
             --tia-grid-bg: #FFFFFF;
             --tia-blue: #007ACC;
+            --tia-light-blue: #DCEAF6;
             --tia-green: #008800;
             --tia-purple: #6A0DAD;
             --tia-gray: #555555;
@@ -223,7 +224,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const pin_v_spacing = 25;
 
     if (instanceName) {
-        const instanceText = createText(x + width / 2, y - 12, instanceName, 'middle', 'instance-text');
+        const instanceTextStyle = { fontSize: '11px', fill: 'var(--tia-gray)' };
+        const instanceText = createText(x + width / 2, y - 10, instanceName, 'middle', 'instance-text', instanceTextStyle);
         group.appendChild(instanceText);
     }
 
@@ -231,7 +233,7 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     body.setAttribute("x", x); body.setAttribute("y", y);
     body.setAttribute("width", width); body.setAttribute("height", height);
     body.setAttribute("rx", 3);
-    Object.assign(body.style, { fill: "#DCEAF6", stroke: "var(--tia-blue)", strokeWidth: "1.5px" });
+    Object.assign(body.style, { fill: "var(--tia-light-blue)", stroke: "var(--tia-blue)", strokeWidth: "1.5px" });
     group.appendChild(body);
 
     const header = document.createElementNS(SVG_NS, "rect");
@@ -243,8 +245,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
     const titleText = createText(x + width / 2, y + headerHeight / 2, title, 'middle', 'block-title', { fill: "white", fontWeight: "600", fontSize: "13px" });
     group.appendChild(titleText);
 
-    let leftPinY = y + pin_v_spacing;
-    let rightPinY = y + pin_v_spacing;
+    let leftPinY = y + headerHeight + pin_v_spacing;
+    let rightPinY = y + headerHeight + pin_v_spacing;
 
     pins.forEach(pin => {
         const isLeft = pin.side === 'left';
@@ -252,7 +254,8 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
 
         const pinNameX = isLeft ? x + pin_h_padding : x + width - pin_h_padding;
         const pinNameAnchor = isLeft ? 'start' : 'end';
-        const pinName = createText(pinNameX, pinY, pin.name, pinNameAnchor, 'pin-name', { fill: "var(--tia-gray)" });
+        const pinNameStyle = { fontWeight: '500', fill: '#333' };
+        const pinName = createText(pinNameX, pinY, pin.name, pinNameAnchor, 'pin-name', pinNameStyle);
         group.appendChild(pinName);
 
         const operandX = isLeft ? x - pin_h_padding - 5 : x + width + pin_h_padding + 5;
@@ -260,9 +263,7 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
         if (pin.operand !== '???') {
             const operandText = createText(operandX, pinY, pin.operand, operandAnchor, 'operand-text');
             group.appendChild(operandText);
-            const wireStartX = isLeft ? operandX + getTextWidth(pin.operand) : pinNameX - getTextWidth(pin.name) - 5;
-            const wireEndX = isLeft ? x : x + width;
-            createWire(svg, wireStartX, pinY, wireEndX, pinY);
+            createWire(svg, operandX, pinY, isLeft ? x : x + width, pinY);
         }
 
         if (isLeft) leftPinY += pin_v_spacing;
@@ -330,18 +331,18 @@ function renderNetwork(svg, networkXml, interfaceTags) {
     });
 
     let currentX = LEFT_RAIL_X + H_SPACING + maxLeftOperandWidth;
-
-    createWire(svg, LEFT_RAIL_X, RUNG_Y, currentX, RUNG_Y);
+    let rungStartX = LEFT_RAIL_X;
 
     parts.forEach(part => {
         const partUid = part.getAttribute("UId");
         const partName = part.getAttribute("Name");
 
         if (partName === 'Contact') {
+            createWire(svg, rungStartX, RUNG_Y, currentX - 5, RUNG_Y);
             const operandWire = wires.find(w => w.querySelector(`NameCon[UId="${partUid}"][Name="operand"]`));
             const operand = getOperand(operandWire, accesses, interfaceTags);
             createContact(svg, currentX, RUNG_Y, operand);
-            createWire(svg, currentX - 5, RUNG_Y, currentX + 5, RUNG_Y); // This line was missing, causing the break
+            rungStartX = currentX + 5;
             currentX += H_SPACING;
         } else if (partName === 'RD_SYS_T' || partName === 'Program_Alarm') {
             const blockPins = [];
@@ -365,17 +366,20 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
             const blockX = currentX;
             const blockWidth = 150;
+            const yOffset = instanceName ? 30 : 15;
             const blockHeight = 22 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING) + 10;
             const blockY = RUNG_Y - (PIN_V_SPACING + 11);
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, sortedPins);
 
+            createWire(svg, rungStartX, RUNG_Y, blockX, RUNG_Y);
+
             const enoPinData = sortedPins.find(p => p.name === 'ENO');
             if (enoPinData) {
                 const enoPinX = blockX + blockWidth;
-                createWire(svg, enoPinX, RUNG_Y, RIGHT_RAIL_X, RUNG_Y);
+                rungStartX = enoPinX;
             }
-            currentX += blockWidth;
+            currentX = blockX + blockWidth;
         }
     });
 
