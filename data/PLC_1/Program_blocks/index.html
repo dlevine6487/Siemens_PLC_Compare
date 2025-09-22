@@ -302,11 +302,8 @@ function renderNetwork(svg, networkXml, interfaceTags) {
         return;
     }
 
-    const enWire = wires.find(w => w.querySelector('Powerrail'));
-    if(enWire) {
-        createWire(svg, currentX, RUNG_Y, currentX + 60, RUNG_Y);
-        currentX += 60;
-    }
+    createWire(svg, currentX, RUNG_Y, currentX + 60, RUNG_Y);
+    currentX += 60;
 
     parts.forEach(part => {
         const partUid = part.getAttribute("UId");
@@ -329,21 +326,20 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
             const INPUT_PINS = ['en', 'SIG', 'TIMESTAMP', 'IN', 'IN1', 'IN2'];
 
-            blockWires.sort((a,b) => {
-                const aName = a.querySelector('NameCon').getAttribute('Name');
-                const bName = b.querySelector('NameCon').getAttribute('Name');
-                if (aName === 'en') return -1;
-                if (bName === 'en') return 1;
-                if (aName === 'eno') return 1;
-                if (bName === 'eno') return -1;
-                return aName.localeCompare(bName);
-            })
-            .forEach(w => {
+            blockWires.forEach(w => {
                 const nameCon = w.querySelector(`NameCon[UId="${partUid}"]`);
                 const pinName = nameCon.getAttribute("Name");
                 const operand = getOperand(w, accesses, interfaceTags);
                 const side = INPUT_PINS.includes(pinName) ? 'left' : 'right';
                 blockPins.push({ name: pinName.toUpperCase(), operand: operand, side: side });
+            });
+
+            blockPins.sort((a,b) => {
+                if(a.name === 'EN') return -1;
+                if(b.name === 'EN') return 1;
+                if(a.name === 'ENO') return 1;
+                if(b.name === 'ENO') return -1;
+                return a.name.localeCompare(b.name);
             });
 
             const blockX = currentX;
@@ -352,7 +348,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
             const leftPins = blockPins.filter(p => p.side === 'left').length;
             const rightPins = blockPins.filter(p => p.side === 'right').length;
             const blockHeight = 10 + (Math.max(leftPins, rightPins) * 22);
-            const blockY = RUNG_Y - (blockHeight / 2) - yOffset;
+            const blockY = RUNG_Y - yOffset - (blockHeight/2);
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, blockPins);
 
