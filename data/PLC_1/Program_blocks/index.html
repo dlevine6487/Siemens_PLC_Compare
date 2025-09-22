@@ -262,10 +262,6 @@ function createBlock(svg, x, y, width, height, title, instanceName, pins) {
             group.appendChild(operandText);
         }
 
-        const wireStartX = isLeft ? x - pin_h_padding - 5 : x + width;
-        const wireEndX = isLeft ? x : x + width + pin_h_padding + 5;
-        createWire(svg, wireStartX, pinY, wireEndX, pinY);
-
         if (isLeft) leftPinY += pin_v_spacing;
         else rightPinY += pin_v_spacing;
     });
@@ -297,7 +293,7 @@ function renderNetwork(svg, networkXml, interfaceTags) {
     const LEFT_RAIL_X = 30;
     const RIGHT_RAIL_X = 770;
     const H_SPACING = 40;
-    const PIN_V_SPACING = 25; // Define here to be used in calculations
+    const PIN_V_SPACING = 25;
 
     createWire(svg, LEFT_RAIL_X, 20, LEFT_RAIL_X, RUNG_Y + 100);
     createWire(svg, RIGHT_RAIL_X, 20, RIGHT_RAIL_X, RUNG_Y + 100);
@@ -365,8 +361,9 @@ function renderNetwork(svg, networkXml, interfaceTags) {
 
             const blockX = currentX;
             const blockWidth = 150;
+            const yOffset = instanceName ? 30 : 15;
             const blockHeight = 22 + (Math.max(leftPins.length, rightPins.length) * PIN_V_SPACING) + 10;
-            const blockY = RUNG_Y - (PIN_V_SPACING);
+            const blockY = RUNG_Y - (PIN_V_SPACING + 22); // Align top pin with rung
 
             createBlock(svg, blockX, blockY, blockWidth, blockHeight, partName, instanceName, sortedPins);
 
